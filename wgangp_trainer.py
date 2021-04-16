@@ -19,12 +19,14 @@ from simple_gan import SimpleGAN
 class Trainer:
     def __init__(self,
                  model: SimpleGAN, dataloader,
-                 lr=0.00005, clip_value=0.01, discriminator_steps=5,
-                 files_to_backup=[]):
+                 lr=0.00005, clip_value=0.01, gp_weight=10.0,
+                 discriminator_steps=5,
+                 files_to_backup=list()):
         self.model = model
         self.dataloader = dataloader
         self.lr = lr
         self.clip_value = clip_value
+        self.gp_weight = gp_weight
         self.batch_size = self.dataloader.batch_size
         self.discriminator_steps = discriminator_steps
         self.opt_generator = torch.optim.RMSprop(self.model.generator.parameters(), lr=self.lr)
@@ -71,16 +73,42 @@ class Trainer:
             plt.savefig(self.plot_dir+f"{epoch}.png", bbox_inches='tight')
             plt.close()
 
+    def gradien_penalty(self, data, fake_data):
+        batch_size = data.shape[0]
+        eps = torch.rand(size=(batch_size, 1, 1, 1)).cuda()
+        data_interpolated = eps * data + (1-eps)*fake_data
+        interpolated = torch.autograd.Variable(data_interpolated, requires_grad=True)
+        decision_interpolated = self.model.discriminator(interpolated)
+        grad_outputs = torch.ones_like(decision_interpolated, requires_grad=False)
+        gradients = torch.autograd.grad(
+            outputs=decision_interpolated,
+            inputs=interpolated,
+            grad_outputs=grad_outputs,
+            create_graph=True,
+            retain_graph=True,
+        )
+        gradients = gradients[0].view(batch_size, -1)
+        gradient_norms = torch.sqrt(torch.sum(gradients**2, dim=1) + 1e-7)
+        # Original WGAN-GP penalty https://arxiv.org/abs/1704.00028
+        # penalty = torch.mean((gradient_norms - 1)**2)
+        # Zero-centered WGAN-GP penalty from https://arxiv.org/abs/1902.03984
+        penalty = torch.mean((gradient_norms - 0)**2)
+        return penalty
+
+
     def step_discriminator(self, data):
         batch_size = data.shape[0]
         fake_data = self.model.generator.generate_batch(batch_size=batch_size).detach()
         decision_true = self.model.discriminator(data)
         decision_fake = self.model.discriminator(fake_data)
-        loss = -torch.mean(decision_true) + torch.mean(decision_fake)
+        loss_true = -torch.mean(decision_true)
+        loss_fake = torch.mean(decision_fake)
+        loss_gp = self.gradien_penalty(data, fake_data)
+        loss = loss_true + loss_fake + self.gp_weight*loss_gp
         self.opt_discriminator.zero_grad()
         loss.backward()
         self.opt_discriminator.step()
-        return loss.item()
+        return loss.item(), loss_true.item(), loss_fake.item(), loss_gp.item()
 
     def step_generator(self):
         fake_data = self.model.generator.generate_batch(batch_size=self.batch_size)
@@ -102,7 +130,8 @@ class Trainer:
 
             for i, data in tqdm(enumerate(self.dataloader), total=len(self.dataloader)):
 
-                total_discriminator_loss += self.step_discriminator(data=data[0].cuda())
+                losses_discriminator = self.step_discriminator(data=data[0].cuda())
+                total_discriminator_loss += losses_discriminator[0]
 
                 self.clip_discriminator()
 
@@ -128,8 +157,8 @@ def test():
         shuffle=True,
     )
 
-    tr = Trainer(model, dataloader)
-    tr.train(2)
+    tr = Trainer(model, dataloader, files_to_backup=['simple_gan.py'])
+    tr.train(20)
 
 
 if __name__=="__main__":
