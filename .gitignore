@@ -1,5 +1,7 @@
 lectures/
 papers/
+logs/
+.idea/
 
 ## Core latex/pdflatex auxiliary files:
 *.aux
