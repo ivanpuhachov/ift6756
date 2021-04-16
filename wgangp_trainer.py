@@ -7,7 +7,11 @@ from torchvision import datasets
 import torchvision.transforms as transforms
 from torchvision.utils import make_grid
 
+import os
 from tqdm import tqdm
+from datetime import datetime
+import matplotlib.pyplot as plt
+from shutil import copyfile
 
 from simple_gan import SimpleGAN
 
@@ -16,7 +20,7 @@ class Trainer:
     def __init__(self,
                  model: SimpleGAN, dataloader,
                  lr=0.00005, clip_value=0.01, discriminator_steps=5,
-                 log_dir="logs/test/"):
+                 files_to_backup=[]):
         self.model = model
         self.dataloader = dataloader
         self.lr = lr
@@ -26,16 +30,46 @@ class Trainer:
         self.opt_generator = torch.optim.RMSprop(self.model.generator.parameters(), lr=self.lr)
         self.opt_discriminator = torch.optim.RMSprop(self.model.discriminator.parameters(), lr=self.lr)
 
-        self.log_dir = log_dir
-        self.tb_writer = SummaryWriter(self.log_dir)
+        self.files_to_backup = ['wgangp_trainer.py']
+        self.files_to_backup.extend(files_to_backup)
+
+        self.log_dir = self.create_logs_folder()
+        print(f"log dir: {self.log_dir}")
+        self.tb_writer = SummaryWriter(self.log_dir+"tensorboard/")
+        print(f"TensorBoard: tensorboard --logdir={self.log_dir+'tensorboard/'}")
+        self.plot_dir = self.log_dir + "plots/"
+
+        self.backup_files()
+
+    def create_logs_folder(self):
+        folder_log = "logs/run" + datetime.now().strftime("%d%H%M") + "/"
+        if os.path.exists(folder_log):
+            for f in os.listdir(folder_log):
+                os.remove(os.path.join(folder_log, f))
+        else:
+            os.mkdir(folder_log)
+        os.mkdir(folder_log + "tensorboard/")
+        os.mkdir(folder_log + "plots/")
+        return folder_log
+
+    def backup_files(self):
+        for f in self.files_to_backup:
+            copyfile(f, self.log_dir + f)
 
     def report_loss(self, g_loss, d_loss, epoch):
         self.tb_writer.add_scalar(tag="gen loss", scalar_value=g_loss, global_step=epoch)
         self.tb_writer.add_scalar(tag="disc loss", scalar_value=d_loss, global_step=epoch)
 
-    def report_generation(self, epoch):
-        generated = self.model.generator.generate_batch(batch_size=24)
-        self.tb_writer.add_image('generation', make_grid(generated, nrow=4), global_step=epoch)
+    def report_generation(self, epoch, save=True):
+        generated = self.model.generator.generate_batch(batch_size=24).detach().cpu()
+        image = make_grid(generated, nrow=4)
+        self.tb_writer.add_image('generation', image, global_step=epoch)
+        if save:
+            plt.imshow(image.permute(1,2,0).numpy(), cmap='Greys')
+            plt.title(f"epoch {epoch}")
+            plt.axis("off")
+            plt.savefig(self.plot_dir+f"{epoch}.png", bbox_inches='tight')
+            plt.close()
 
     def step_discriminator(self, data):
         batch_size = data.shape[0]
@@ -95,7 +129,7 @@ def test():
     )
 
     tr = Trainer(model, dataloader)
-    tr.train(20)
+    tr.train(2)
 
 
 if __name__=="__main__":
