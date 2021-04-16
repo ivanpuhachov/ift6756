@@ -34,7 +34,7 @@
 	urlcolor={blue!80!black}
 }
 
-\title{Abstract vector sketch generation using differentiable rendering and GANs}
+\title{Vector sketch generation using differentiable rasterization and GAN}
 
 % The \author macro works with any number of authors. There are two commands
 % used to separate the names and addresses of multiple authors: \And and \AND.
@@ -55,7 +55,7 @@
 \maketitle
 
 \begin{abstract}
-  In this project we use differentiable rasterizer recently proposed by \cite{diffsvg} to generate artistic vector-graphics images, validating proposed pipeline on a more complex dataset. Vector graphics data representation makes the problem challenging, as it stores stroke information, opposed to common pixel-wise image-as-array.  At the same time, vector data allows editing and scaling to any resolution, which is essential for art production (printing and distribution).
+  In this project we use differentiable rasterizer recently proposed by \cite{diffsvg} to generate artistic vector-graphics images, validating proposed pipeline on a more complex dataset. Vector graphics data representation makes the problem challenging, as it stores stroke information. This makes common image generation techniques unusable, as strokes do not form a linear space. At the same time, vector data allows editing and scaling to any resolution, which is essential for art production (printing and distribution).
 \end{abstract}
 
 \section{Overview}
@@ -75,10 +75,9 @@ The first successful vector-graphics sketch generation was done by \cite{sketchr
 	\caption{Samples of QuickDraw dataset, by \cite{sketchrnn}}
 	\label{fig:quickdraw}
 \end{figure}
-
 \begin{figure}[h]
 	\centering
-	\includegraphics[width=0.55\textwidth]{img/doodlergan1.png}
+	\includegraphics[width=0.45\textwidth]{img/doodlergan1.png}
 	\caption{Samples from Creative Birds dataset by \cite{doodlergan}}
 	\label{fig:doodlergan}
 \end{figure}
