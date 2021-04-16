@@ -21,7 +21,8 @@ class Trainer:
                  model: SimpleGAN, dataloader,
                  lr=0.00005, clip_value=0.01, gp_weight=10.0,
                  discriminator_steps=5,
-                 files_to_backup=list()):
+                 files_to_backup=list(),
+                 save_freq=100):
         self.model = model
         self.dataloader = dataloader
         self.lr = lr
@@ -35,11 +36,14 @@ class Trainer:
         self.files_to_backup = ['wgangp_trainer.py']
         self.files_to_backup.extend(files_to_backup)
 
+        self.save_freq = save_freq
+
         self.log_dir = self.create_logs_folder()
         print(f"log dir: {self.log_dir}")
         self.tb_writer = SummaryWriter(self.log_dir+"tensorboard/")
         print(f"TensorBoard: tensorboard --logdir={self.log_dir+'tensorboard/'}")
         self.plot_dir = self.log_dir + "plots/"
+        self.checkpoint_dir = self.log_dir + "checkpoints/"
 
         self.backup_files()
 
@@ -52,6 +56,7 @@ class Trainer:
             os.mkdir(folder_log)
         os.mkdir(folder_log + "tensorboard/")
         os.mkdir(folder_log + "plots/")
+        os.mkdir(folder_log + "checkpoints/")
         return folder_log
 
     def backup_files(self):
@@ -72,6 +77,24 @@ class Trainer:
             plt.axis("off")
             plt.savefig(self.plot_dir+f"{epoch}.png", bbox_inches='tight')
             plt.close()
+
+    def save_checkpoint(self, name):
+        path = self.checkpoint_dir + name
+        print(f"Saving model to {path}")
+        torch.save({
+            'generator_state_dict': self.model.generator.state_dict(),
+            'discriminator_state_dict': self.model.discriminator.state_dict(),
+            'generator_opt': self.opt_generator.state_dict(),
+            'discriminator_opt': self.opt_discriminator.state_dict(),
+        }, path)
+
+    def load_checkpoint(self, path):
+        checkpoint = torch.load(path)
+        self.model.generator.load_state_dict(checkpoint['generator_state_dict'])
+        self.model.discriminator.load_state_dict(checkpoint['discriminator_state_dict'])
+        self.opt_generator.load_state_dict(checkpoint['generator_opt'])
+        self.opt_discriminator.load_state_dict(checkpoint['discriminator_opt'])
+        print(f"Model loaded from {path}")
 
     def gradien_penalty(self, data, fake_data):
         batch_size = data.shape[0]
@@ -94,7 +117,6 @@ class Trainer:
         # Zero-centered WGAN-GP penalty from https://arxiv.org/abs/1902.03984
         penalty = torch.mean((gradient_norms - 0)**2)
         return penalty
-
 
     def step_discriminator(self, data):
         batch_size = data.shape[0]
@@ -124,7 +146,8 @@ class Trainer:
             param.data.clamp_(-self.clip_value, self.clip_value)
 
     def train(self, n_epochs):
-        for epoch in range(n_epochs):
+        self.save_checkpoint(name="init.pth")
+        for i_epoch in range(n_epochs):
             total_discriminator_loss = 0
             total_generator_loss = 0
 
@@ -140,8 +163,13 @@ class Trainer:
 
             total_generator_loss /= len(self.dataloader)
             total_discriminator_loss /= len(self.dataloader)
-            self.report_loss(g_loss=total_generator_loss, d_loss=total_discriminator_loss, epoch=epoch)
-            self.report_generation(epoch=epoch)
+            self.report_loss(g_loss=total_generator_loss, d_loss=total_discriminator_loss, epoch=i_epoch)
+            self.report_generation(epoch=i_epoch)
+
+            self.save_checkpoint(name="last_step.pth")
+
+            if i_epoch%self.save_freq == self.save_freq-1:
+                self.save_checkpoint(name=f"checkpoint_{i_epoch}.pth")
 
 
 def test():
