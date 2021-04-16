@@ -3,6 +3,9 @@ import torch.nn as nn
 
 
 class Generator(nn.Module):
+    """
+    Template class for generator. Here - feed forward flat perceptron.
+    """
     def __init__(self, latent_dim=100, img_size=28):
         super(Generator, self).__init__()
         self.latent_dim = latent_dim
@@ -21,11 +24,10 @@ class Generator(nn.Module):
             nn.BatchNorm1d(1024),
             nn.LeakyReLU(0.1),
             nn.Linear(1024, self.img_size**2),
-            nn.Tanh(),
         )
 
     def forward(self, z):
-        x = self.flat_layers(z)
+        x = torch.tanh(self.flat_layers(z))
         x = x.view(x.shape[0], 1, self.img_size, self.img_size)
         return x
 
@@ -33,8 +35,30 @@ class Generator(nn.Module):
         z = torch.rand(size=(batch_size, self.latent_dim)).cuda()
         return self.forward(z)
 
+    def forward_return_scene(self, z):
+        """
+        This function generates raster images AND scenes from latent vector
+
+        :param z: (batch_size, latent_dim) - latent vector
+        :return:  images, scenes
+        """
+        raise NotImplementedError
+
+    def generate_return_scene(self, batch_size):
+        """
+        This function generates batch of raster images AND scenes
+
+        :param batch_size:
+        :return: images, scenes
+        """
+        z = torch.rand(size=(batch_size, self.latent_dim)).cuda()
+        return self.forward_return_scene(z)
+
 
 class Discriminator(nn.Module):
+    """
+    Tenplate class for discriminator. Here - feed forward flat perceptron.
+    """
     def __init__(self, img_size=28):
         super(Discriminator, self).__init__()
         self.img_size = img_size
@@ -54,7 +78,16 @@ class Discriminator(nn.Module):
 
 
 class SimpleGAN(nn.Module):
+    """
+    This is a simple GAN base class. Generator - feed-forward flat perceptron. Discriminator - feed forward flat perceptron
+    """
     def __init__(self, latent_dim=100, img_size=28):
+        """
+        SimpleGAN initializer
+
+        :param latent_dim: (int) latent dimension of generator
+        :param img_size: (int) image size of generated
+        """
         super(SimpleGAN, self).__init__()
         self.img_size = img_size
         self.latent_dim = latent_dim

@@ -14,6 +14,7 @@ import matplotlib.pyplot as plt
 from shutil import copyfile
 
 from simple_gan import SimpleGAN
+from vector_gan import SimpleGANBezier
 
 
 class Trainer:
@@ -148,6 +149,7 @@ class Trainer:
     def train(self, n_epochs):
         self.save_checkpoint(name="init.pth")
         for i_epoch in range(n_epochs):
+            print(f"Epoch: {i_epoch}")
             total_discriminator_loss = 0
             total_generator_loss = 0
 
@@ -176,7 +178,7 @@ def test():
     model = SimpleGAN().to('cuda')
     dataloader = torch.utils.data.DataLoader(
         datasets.MNIST(
-            "../../data/mnist",
+            "data/mnist",
             train=True,
             download=True,
             transform=transforms.Compose([transforms.ToTensor(), transforms.Normalize([0.5], [0.5])]),
@@ -189,5 +191,23 @@ def test():
     tr.train(20)
 
 
-if __name__=="__main__":
-    test()
+def test_vector():
+    model = SimpleGANBezier(img_size=28).to('cuda')
+    dataloader = torch.utils.data.DataLoader(
+        datasets.MNIST(
+            "data/mnist",
+            train=True,
+            download=True,
+            transform=transforms.Compose([transforms.ToTensor(), transforms.Normalize([0.5], [0.5])]),
+        ),
+        batch_size=64,
+        shuffle=True,
+    )
+
+    tr = Trainer(model, dataloader, files_to_backup=['simple_gan.py'])
+    tr.train(5)  # 10 minutes per epoch!
+
+
+if __name__ == "__main__":
+    # test()
+    test_vector()
