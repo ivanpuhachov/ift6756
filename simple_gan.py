@@ -10,6 +10,7 @@ class Generator(nn.Module):
         super(Generator, self).__init__()
         self.latent_dim = latent_dim
         self.img_size = img_size
+        self.flat_out = 1024
 
         self.flat_layers = nn.Sequential(
             nn.Linear(self.latent_dim, 128),
@@ -20,14 +21,15 @@ class Generator(nn.Module):
             nn.Linear(256, 512, bias=False),
             nn.BatchNorm1d(512),
             nn.LeakyReLU(0.1),
-            nn.Linear(512, 1024, bias=False),
-            nn.BatchNorm1d(1024),
+            nn.Linear(512, self.flat_out, bias=False),
+            nn.BatchNorm1d(self.flat_out),
             nn.LeakyReLU(0.1),
-            nn.Linear(1024, self.img_size**2),
         )
 
+        self.last_layer = nn.Linear(self.flat_out, self.img_size**2)
+
     def forward(self, z):
-        x = torch.tanh(self.flat_layers(z))
+        x = torch.sigmoid(self.last_layer(self.flat_layers(z)))
         x = x.view(x.shape[0], 1, self.img_size, self.img_size)
         return x
 

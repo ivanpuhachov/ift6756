@@ -174,40 +174,40 @@ class Trainer:
                 self.save_checkpoint(name=f"checkpoint_{i_epoch}.pth")
 
 
-def test():
+def test(n_epochs=20):
     model = SimpleGAN().to('cuda')
     dataloader = torch.utils.data.DataLoader(
         datasets.MNIST(
             "data/mnist",
             train=True,
             download=True,
-            transform=transforms.Compose([transforms.ToTensor(), transforms.Normalize([0.5], [0.5])]),
+            transform=transforms.Compose([transforms.ToTensor()]),
         ),
         batch_size=64,
         shuffle=True,
     )
 
     tr = Trainer(model, dataloader, files_to_backup=['simple_gan.py'])
-    tr.train(20)
+    tr.train(n_epochs)
 
 
-def test_vector():
+def test_vector(n_epochs):
     model = SimpleGANBezier(img_size=28).to('cuda')
     dataloader = torch.utils.data.DataLoader(
         datasets.MNIST(
             "data/mnist",
             train=True,
             download=True,
-            transform=transforms.Compose([transforms.ToTensor(), transforms.Normalize([0.5], [0.5])]),
+            transform=transforms.Compose([transforms.ToTensor()]),
         ),
         batch_size=64,
         shuffle=True,
     )
 
     tr = Trainer(model, dataloader, files_to_backup=['simple_gan.py'])
-    tr.train(5)  # 10 minutes per epoch!
+    tr.train(n_epochs)  # 10 minutes per epoch!
 
 
 if __name__ == "__main__":
-    # test()
-    test_vector()
+    test(10)
+    # test_vector()

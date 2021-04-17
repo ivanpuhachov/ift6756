@@ -88,3 +88,9 @@ def bezier_render(all_points, all_widths, all_alphas, force_cpu=True,
     output = output.to(dev)
 
     return output, scenes
+
+
+def scene_to_svg(scene, path):
+    canvas_width, canvas_height, shapes, shape_groups = scene
+    pydiffvg.save_svg(path,
+                      canvas_width, canvas_height, shapes, shape_groups)

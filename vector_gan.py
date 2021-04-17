@@ -27,21 +27,21 @@ class VectorGeneratorBezier(Generator):
 
         # each bezier curves takes 3 x segments points + init point (each point = pair of coords)
         self.linear_points = nn.Sequential(
-            nn.Linear(self.img_size**2,
+            nn.Linear(self.flat_out,
                       out_features=self.n_strokes*(self.num_segments*2*3 + 2)),
             nn.Tanh()
         )
 
         # each curve has width
         self.linear_widths = nn.Sequential(
-            nn.Linear(self.img_size**2,
+            nn.Linear(self.flat_out,
                       self.n_strokes),
             nn.Sigmoid()
         )
 
         # each curve has alpha
         self.linear_alphas = nn.Sequential(
-            nn.Linear(self.img_size**2,
+            nn.Linear(self.flat_out,
                       self.n_strokes),
             nn.Sigmoid()
         )
@@ -64,8 +64,6 @@ class VectorGeneratorBezier(Generator):
             colors=None,
             canvas_size=self.img_size)
 
-        images = images * 2.0 - 1.0
-
         return images, scenes
 
     def forward(self, z):
@@ -83,8 +81,9 @@ def test():
     gen = VectorGeneratorBezier(img_size=28).to('cuda')
     img = gen.generate_batch(batch_size=2)
     print(img.shape)
-    plt.imshow(img[0][0].detach().cpu().numpy())
+    plt.imshow(img[0][0].detach().cpu().numpy(), cmap='gray_r')
     plt.axis('off')
+    plt.colorbar()
     plt.show()
 
 
