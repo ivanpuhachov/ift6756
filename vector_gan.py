@@ -71,20 +71,62 @@ class VectorGeneratorBezier(Generator):
         return images
 
 
+class ConvDiscriminator(Discriminator):
+    def __init__(self, img_size=64):
+        super(ConvDiscriminator, self).__init__(img_size=img_size//4)
+        self.img_size = img_size
+        self.hidden_convs = 10
+        self.conv_layers = torch.nn.Sequential(
+            nn.Conv2d(in_channels=1, out_channels=self.hidden_convs, kernel_size=3, padding=1, bias=False),
+            nn.BatchNorm2d(self.hidden_convs),
+            nn.LeakyReLU(0.1),
+            nn.Conv2d(in_channels=self.hidden_convs, out_channels=self.hidden_convs, kernel_size=2, stride=2),
+            nn.LeakyReLU(0.1),
+
+            nn.Conv2d(in_channels=self.hidden_convs, out_channels=self.hidden_convs, kernel_size=3, padding=1, bias=False),
+            nn.BatchNorm2d(self.hidden_convs),
+            nn.LeakyReLU(0.1),
+            nn.Conv2d(in_channels=self.hidden_convs, out_channels=self.hidden_convs, kernel_size=2, stride=2),
+            nn.LeakyReLU(0.1),
+
+            nn.Conv2d(in_channels=self.hidden_convs, out_channels=self.hidden_convs, kernel_size=3, padding=1,
+                      bias=False),
+            nn.BatchNorm2d(self.hidden_convs),
+            nn.LeakyReLU(0.1),
+            nn.Conv2d(in_channels=self.hidden_convs, out_channels=1, kernel_size=1)
+        )
+
+    def forward(self, x):
+        batch_size = x.shape[0]
+        x = self.conv_layers(x).view(batch_size, -1)
+        y = self.flat_layers(x)
+        return y
+
+
 class SimpleGANBezier(SimpleGAN):
     def __init__(self, latent_dim=100, img_size=28):
-        super(SimpleGANBezier, self).__init__()
+        super(SimpleGANBezier, self).__init__(latent_dim=latent_dim, img_size=img_size)
         self.generator = VectorGeneratorBezier(img_size=img_size, latent_dim=latent_dim)
 
 
+class BezierGAN(SimpleGAN):
+    def __init__(self, latent_dim=100, img_size=64):
+        super(SimpleGANBezier, self).__init__(latent_dim=latent_dim, img_size=img_size)
+        self.generator = VectorGeneratorBezier(img_size=img_size, latent_dim=latent_dim)
+        self.discriminator = ConvDiscriminator(img_size=img_size)
+
+
 def test():
-    gen = VectorGeneratorBezier(img_size=28).to('cuda')
+    gen = VectorGeneratorBezier(img_size=128).to('cuda')
+    disc = ConvDiscriminator(img_size=128).to('cuda')
     img = gen.generate_batch(batch_size=2)
     print(img.shape)
     plt.imshow(img[0][0].detach().cpu().numpy(), cmap='gray_r')
     plt.axis('off')
     plt.colorbar()
     plt.show()
+    y = disc(img)
+    print(y)
 
 
 if __name__ == "__main__":

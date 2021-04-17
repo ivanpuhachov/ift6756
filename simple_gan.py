@@ -64,7 +64,7 @@ class Discriminator(nn.Module):
     def __init__(self, img_size=28):
         super(Discriminator, self).__init__()
         self.img_size = img_size
-        self.model = nn.Sequential(
+        self.flat_layers = nn.Sequential(
             nn.Linear(self.img_size**2, 512),
             nn.LeakyReLU(0.2, inplace=True),
             nn.Linear(512, 256),
@@ -75,7 +75,7 @@ class Discriminator(nn.Module):
     def forward(self, x):
         batch_size = x.shape[0]
         x_flat = x.view(batch_size, -1)
-        y = self.model(x_flat)
+        y = self.flat_layers(x_flat)
         return y
 
 
