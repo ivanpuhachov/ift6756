@@ -23,7 +23,7 @@ class Trainer:
                  lr=0.00005, clip_value=0.01, gp_weight=10.0,
                  discriminator_steps=5,
                  files_to_backup=list(),
-                 save_freq=100,
+                 save_freq=10,
                  log_dir=None):
         self.model = model.cuda()
         self.dataloader = dataloader
@@ -162,7 +162,7 @@ class Trainer:
 
             for i, data in tqdm(enumerate(self.dataloader), total=len(self.dataloader)):
 
-                losses_discriminator = self.step_discriminator(data=data[0].cuda())
+                losses_discriminator = self.step_discriminator(data=data[0].float().cuda())
                 total_discriminator_loss += losses_discriminator[0]
 
                 self.clip_discriminator()

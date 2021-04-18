@@ -48,7 +48,7 @@ if __name__ == "__main__":
     assert (os.path.exists(dataset_path))
 
     print("\n-- logs and backup  --")
-    log_dir = "logs/" + datetime.now().strftime("%m.%d:%H:%M") + f"_n{n_epochs}/"
+    log_dir = "logs/" + datetime.now().strftime("%m.%d.%H.%M") + f"_n{n_epochs}/"
     os.mkdir(log_dir)
 
     with open(log_dir + "cli_args.txt", 'w') as f:
@@ -65,12 +65,12 @@ if __name__ == "__main__":
     trainset = QuickDrawBitmapDataset(fpath=dataset_path,
                                       transform=transforms.Compose([transforms.ToTensor()]))
 
-    trainset = torchvision.datasets.MNIST(
-            "data/mnist",
-            train=True,
-            download=True,
-            transform=transforms.Compose([transforms.ToTensor()]),
-        )
+    # trainset = torchvision.datasets.MNIST(
+    #         "data/mnist",
+    #         train=True,
+    #         download=True,
+    #         transform=transforms.Compose([transforms.ToTensor()]),
+    #     )
 
     dataloader = DataLoader(
         trainset, batch_size=batch_size, shuffle=True, num_workers=num_workers)

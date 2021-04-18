@@ -1,11 +1,13 @@
 from torch.utils.data import Dataset
 import numpy as np
 import matplotlib.pyplot as plt
+import torchvision
+from torchvision import transforms
 
 
 class QuickDrawBitmapDataset(Dataset):
     def __init__(self, fpath='data/full_numpy_bitmap_owl.npy', transform=None):
-        self.data = np.load(fpath).reshape(-1, 1, 28, 28).astype(float) / 255.0
+        self.data = np.load(fpath).reshape(-1, 28, 28, 1).astype(float) / 255.0
         self.transform = transform
 
     def __len__(self):
@@ -19,11 +21,23 @@ class QuickDrawBitmapDataset(Dataset):
 
 def test():
     qd = QuickDrawBitmapDataset()
-    print(qd[0].shape)
+    print(qd[0][0].shape)
     plt.imshow(qd[10][0], cmap='gray_r')
     plt.axis('off')
     plt.colorbar()
     plt.show()
+
+    trainset = QuickDrawBitmapDataset(fpath='data/full_numpy_bitmap_owl.npy',
+                                      transform=transforms.Compose([transforms.ToTensor()]))
+    print(trainset[0][0].shape)
+
+    trainset = torchvision.datasets.MNIST(
+            "data/mnist",
+            train=True,
+            download=True,
+            transform=transforms.Compose([transforms.ToTensor()]),
+        )
+    print(trainset[0][0].shape)
 
 
 if __name__=="__main__":

@@ -110,15 +110,15 @@ class SimpleGANBezier(SimpleGAN):
 
 
 class BezierGAN(SimpleGAN):
-    def __init__(self, latent_dim=100, img_size=64):
-        super(SimpleGANBezier, self).__init__(latent_dim=latent_dim, img_size=img_size)
+    def __init__(self, latent_dim=100, img_size=28):
+        super(BezierGAN, self).__init__(latent_dim=latent_dim, img_size=img_size)
         self.generator = VectorGeneratorBezier(img_size=img_size, latent_dim=latent_dim)
         self.discriminator = ConvDiscriminator(img_size=img_size)
 
 
 def test():
-    gen = VectorGeneratorBezier(img_size=128).to('cuda')
-    disc = ConvDiscriminator(img_size=128).to('cuda')
+    gen = VectorGeneratorBezier(img_size=28).to('cuda')
+    disc = ConvDiscriminator(img_size=28).to('cuda')
     img = gen.generate_batch(batch_size=2)
     print(img.shape)
     plt.imshow(img[0][0].detach().cpu().numpy(), cmap='gray_r')
