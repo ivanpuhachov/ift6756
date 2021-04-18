@@ -23,8 +23,9 @@ class Trainer:
                  lr=0.00005, clip_value=0.01, gp_weight=10.0,
                  discriminator_steps=5,
                  files_to_backup=list(),
-                 save_freq=100):
-        self.model = model
+                 save_freq=100,
+                 log_dir=None):
+        self.model = model.cuda()
         self.dataloader = dataloader
         self.lr = lr
         self.clip_value = clip_value
@@ -34,12 +35,16 @@ class Trainer:
         self.opt_generator = torch.optim.RMSprop(self.model.generator.parameters(), lr=self.lr)
         self.opt_discriminator = torch.optim.RMSprop(self.model.discriminator.parameters(), lr=self.lr)
 
-        self.files_to_backup = ['wgangp_trainer.py']
+        self.files_to_backup = ['wgangp_trainer.py', 'diff_rendering.py', 'simple_gan.py', 'vector_gan.py', 'dataset.py']
         self.files_to_backup.extend(files_to_backup)
 
         self.save_freq = save_freq
 
-        self.log_dir = self.create_logs_folder()
+        if log_dir is None:
+            self.log_dir = "logs/run" + datetime.now().strftime("%d%H%M") + "/"
+        else:
+            self.log_dir = log_dir
+        self.create_logs_folder()
         print(f"log dir: {self.log_dir}")
         self.tb_writer = SummaryWriter(self.log_dir+"tensorboard/")
         print(f"TensorBoard: tensorboard --logdir={self.log_dir+'tensorboard/'}")
@@ -49,16 +54,16 @@ class Trainer:
         self.backup_files()
 
     def create_logs_folder(self):
-        folder_log = "logs/run" + datetime.now().strftime("%d%H%M") + "/"
-        if os.path.exists(folder_log):
-            for f in os.listdir(folder_log):
-                os.remove(os.path.join(folder_log, f))
+        if os.path.exists(self.log_dir):
+            pass
+            # for f in os.listdir(self.log_dir):
+            #     os.remove(os.path.join(self.log_dir, f))
         else:
-            os.mkdir(folder_log)
-        os.mkdir(folder_log + "tensorboard/")
-        os.mkdir(folder_log + "plots/")
-        os.mkdir(folder_log + "checkpoints/")
-        return folder_log
+            os.mkdir(self.log_dir)
+        os.mkdir(self.log_dir + "tensorboard/")
+        os.mkdir(self.log_dir + "plots/")
+        os.mkdir(self.log_dir + "checkpoints/")
+        return self.log_dir
 
     def backup_files(self):
         for f in self.files_to_backup:
@@ -97,7 +102,7 @@ class Trainer:
         self.opt_discriminator.load_state_dict(checkpoint['discriminator_opt'])
         print(f"Model loaded from {path}")
 
-    def gradien_penalty(self, data, fake_data):
+    def gradient_penalty(self, data, fake_data):
         batch_size = data.shape[0]
         eps = torch.rand(size=(batch_size, 1, 1, 1)).cuda()
         data_interpolated = eps * data + (1-eps)*fake_data
@@ -120,13 +125,14 @@ class Trainer:
         return penalty
 
     def step_discriminator(self, data):
+        self.model.train()
         batch_size = data.shape[0]
         fake_data = self.model.generator.generate_batch(batch_size=batch_size).detach()
         decision_true = self.model.discriminator(data)
         decision_fake = self.model.discriminator(fake_data)
         loss_true = -torch.mean(decision_true)
         loss_fake = torch.mean(decision_fake)
-        loss_gp = self.gradien_penalty(data, fake_data)
+        loss_gp = self.gradient_penalty(data, fake_data)
         loss = loss_true + loss_fake + self.gp_weight*loss_gp
         self.opt_discriminator.zero_grad()
         loss.backward()
@@ -134,6 +140,7 @@ class Trainer:
         return loss.item(), loss_true.item(), loss_fake.item(), loss_gp.item()
 
     def step_generator(self):
+        self.model.train()
         fake_data = self.model.generator.generate_batch(batch_size=self.batch_size)
         loss = -torch.mean(self.model.discriminator(fake_data))
         self.opt_generator.zero_grad()
@@ -172,6 +179,7 @@ class Trainer:
 
             if i_epoch%self.save_freq == self.save_freq-1:
                 self.save_checkpoint(name=f"checkpoint_{i_epoch}.pth")
+        self.tb_writer.close()
 
 
 def test(n_epochs=20):
@@ -187,7 +195,7 @@ def test(n_epochs=20):
         shuffle=True,
     )
 
-    tr = Trainer(model, dataloader, files_to_backup=['simple_gan.py'])
+    tr = Trainer(model, dataloader)
     tr.train(n_epochs)
 
 
