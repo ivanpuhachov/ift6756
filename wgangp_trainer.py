@@ -144,22 +144,19 @@ class Trainer:
         return penalty
 
     def step_discriminator(self, data):
-        self.model.train()
         batch_size = data.shape[0]
         fake_data = self.model.generator.generate_batch(batch_size=batch_size).detach()
         decision_true = self.model.discriminator(data)
         decision_fake = self.model.discriminator(fake_data)
         loss_true = -torch.mean(decision_true)
         loss_fake = torch.mean(decision_fake)
-        loss_gp = self.gradient_penalty(data, fake_data)
-        loss = loss_true + loss_fake + self.gp_weight*loss_gp
+        loss = loss_true + loss_fake
         self.opt_discriminator.zero_grad()
         loss.backward()
         self.opt_discriminator.step()
-        return loss.item(), loss_true.item(), loss_fake.item(), loss_gp.item()
+        return loss.item(), loss_true.item(), loss_fake.item()
 
     def step_generator(self):
-        self.model.train()
         fake_data = self.model.generator.generate_batch(batch_size=self.batch_size)
         loss = -torch.mean(self.model.discriminator(fake_data))
         self.opt_generator.zero_grad()
@@ -191,7 +188,6 @@ class Trainer:
         z_new = z_init + alpha * dfdz[0]
         z_new = torch.clamp(z_new, min=-1.0, max=1.0).detach()
 
-        self.model.train()
         fake_data = self.model.generator.forward(z=z_new)
         loss = -torch.mean(self.model.discriminator(fake_data))
         self.opt_generator.zero_grad()
@@ -225,7 +221,6 @@ class Trainer:
         delta_z = alpha * g / (beta + torch.norm(g))
         z_new = torch.clamp(z_init + delta_z, min=-1.0, max=1.0).detach()
 
-        self.model.train()
         fake_data = self.model.generator.forward(z=z_new)
         loss = -torch.mean(self.model.discriminator(fake_data))
         self.opt_generator.zero_grad()
@@ -238,23 +233,23 @@ class Trainer:
         for param in self.model.discriminator.parameters():
             param.data.clamp_(-self.clip_value, self.clip_value)
 
+    def training_routine(self, iteration, data):
+        raise NotImplementedError
+
     def train(self, n_epochs):
         self.save_checkpoint(name="init.pth")
         for i_epoch in range(n_epochs):
             print(f"Epoch: {i_epoch}")
+            self.model.train()
             total_discriminator_loss = 0
             total_generator_loss = 0
 
             for i, data in tqdm(enumerate(self.dataloader), total=len(self.dataloader)):
+                gen_loss, disc_loss = self.training_routine(iteration=i, data=data[0].float().cuda())
+                total_generator_loss += gen_loss
+                total_discriminator_loss += disc_loss
 
-                losses_discriminator = self.step_discriminator(data=data[0].float().cuda())
-                total_discriminator_loss += losses_discriminator[0]
-
-                self.clip_discriminator()
-
-                if i % self.discriminator_steps == 0:
-                    total_generator_loss += self.step_generator()
-
+            self.model.eval()
             total_generator_loss /= len(self.dataloader)
             total_discriminator_loss /= len(self.dataloader)
             self.report_loss(g_loss=total_generator_loss, d_loss=total_discriminator_loss, epoch=i_epoch)
@@ -302,6 +297,116 @@ class Trainer:
         return fid
 
 
+class Vanilla_Trainer(Trainer):
+    def __init__(self,
+                 model: SimpleGAN, dataloader,
+                 lr=0.00005, clip_value=0.01, gp_weight=10.0,
+                 discriminator_steps=5,
+                 files_to_backup=list(),
+                 save_freq=10,
+                 log_dir=None):
+        super(Vanilla_Trainer, self).__init__(model, dataloader, lr, clip_value, gp_weight, discriminator_steps, files_to_backup, save_freq, log_dir)
+
+    def training_routine(self, iteration, data):
+        gen_loss, disc_loss = 0, 0
+        losses_discriminator = self.step_discriminator(data=data)
+        disc_loss += losses_discriminator[0]
+
+        if iteration % self.discriminator_steps == 0:
+            gen_loss += self.step_generator()
+        return gen_loss, disc_loss
+
+class WGAN_Trainer(Trainer):
+    def __init__(self,
+                 model: SimpleGAN, dataloader,
+                 lr=0.00005, clip_value=0.01, gp_weight=10.0,
+                 discriminator_steps=5,
+                 files_to_backup=list(),
+                 save_freq=10,
+                 log_dir=None):
+        super(WGAN_Trainer, self).__init__(model, dataloader, lr, clip_value, gp_weight, discriminator_steps, files_to_backup, save_freq, log_dir)
+
+    def training_routine(self, iteration, data):
+        gen_loss, disc_loss = 0, 0
+        losses_discriminator = self.step_discriminator(data=data)
+        disc_loss += losses_discriminator[0]
+
+        self.clip_discriminator()
+
+        if iteration % self.discriminator_steps == 0:
+            gen_loss += self.step_generator()
+        return gen_loss, disc_loss
+
+
+class WGANGP_Trainer(WGAN_Trainer):
+    def __init__(self,
+                 model: SimpleGAN, dataloader,
+                 lr=0.00005, clip_value=0.01, gp_weight=10.0,
+                 discriminator_steps=5,
+                 files_to_backup=list(),
+                 save_freq=10,
+                 log_dir=None):
+        super(WGANGP_Trainer, self).__init__(model, dataloader, lr, clip_value, gp_weight, discriminator_steps,
+                                          files_to_backup, save_freq, log_dir)
+
+    def step_discriminator(self, data):
+        batch_size = data.shape[0]
+        fake_data = self.model.generator.generate_batch(batch_size=batch_size).detach()
+        decision_true = self.model.discriminator(data)
+        decision_fake = self.model.discriminator(fake_data)
+        loss_true = -torch.mean(decision_true)
+        loss_fake = torch.mean(decision_fake)
+        loss_gp = self.gradient_penalty(data, fake_data)
+        loss = loss_true + loss_fake + self.gp_weight * loss_gp
+        self.opt_discriminator.zero_grad()
+        loss.backward()
+        self.opt_discriminator.step()
+        return loss.item(), loss_true.item(), loss_fake.item(), loss_gp.item()
+
+
+class LOGAN_GD_Trainer(Trainer):
+    def __init__(self,
+                 model: SimpleGAN, dataloader,
+                 lr=0.00005, clip_value=0.01, gp_weight=10.0,
+                 discriminator_steps=5,
+                 files_to_backup=list(),
+                 save_freq=10,
+                 log_dir=None):
+        super(LOGAN_GD_Trainer, self).__init__(model, dataloader, lr, clip_value, gp_weight, discriminator_steps, files_to_backup, save_freq, log_dir)
+
+    def training_routine(self, iteration, data):
+        gen_loss, disc_loss = 0, 0
+        losses_discriminator = self.step_discriminator(data=data)
+        disc_loss += losses_discriminator[0]
+
+        self.clip_discriminator()
+
+        if iteration % self.discriminator_steps == 0:
+            gen_loss += self.step_generator_GD()
+        return gen_loss, disc_loss
+
+
+class LOGAN_NGD_Trainer(Trainer):
+    def __init__(self,
+                 model: SimpleGAN, dataloader,
+                 lr=0.00005, clip_value=0.01, gp_weight=10.0,
+                 discriminator_steps=5,
+                 files_to_backup=list(),
+                 save_freq=10,
+                 log_dir=None):
+        super(LOGAN_NGD_Trainer, self).__init__(model, dataloader, lr, clip_value, gp_weight, discriminator_steps, files_to_backup, save_freq, log_dir)
+
+    def training_routine(self, iteration, data):
+        gen_loss, disc_loss = 0, 0
+        losses_discriminator = self.step_discriminator(data=data)
+        disc_loss += losses_discriminator[0]
+
+        self.clip_discriminator()
+
+        if iteration % self.discriminator_steps == 0:
+            gen_loss += self.step_generator_NGD()
+        return gen_loss, disc_loss
+
 
 def test(n_epochs=20):
     model = SimpleGAN().to('cuda')
@@ -316,10 +421,12 @@ def test(n_epochs=20):
         shuffle=True,
     )
 
-    tr = Trainer(model, dataloader)
+    # tr = Vanilla_Trainer(model, dataloader)
+    # tr = WGAN_Trainer(model, dataloader)
+    # tr = WGANGP_Trainer(model, dataloader)
+    # tr = LOGAN_GD_Trainer(model, dataloader)
+    tr = LOGAN_NGD_Trainer(model, dataloader)
     tr.train(n_epochs)
-    tr.step_generator_GD()
-    tr.step_generator_NGD()
 
 
 def test_vector(n_epochs):
@@ -340,5 +447,5 @@ def test_vector(n_epochs):
 
 
 if __name__ == "__main__":
-    test(2)
+    test(10)
     # test_vector()
