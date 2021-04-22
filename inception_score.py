@@ -44,7 +44,7 @@ class PretrainedInception(nn.Module):
         dataloader = torch.utils.data.DataLoader(imgs, batch_size=batch_size)
         features = list()
         for i, data in enumerate(dataloader):
-            features.append(self.get_last_features(data))
+            features.append(self.get_last_features(data.to(self.device)))
         features = torch.cat(features, dim=0).cpu().numpy()
         mu = np.mean(features, axis=0)
         sigma = np.cov(features, rowvar=False)

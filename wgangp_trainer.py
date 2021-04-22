@@ -1,6 +1,6 @@
 import torch
 
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, TensorDataset
 from torch.utils.tensorboard import SummaryWriter
 
 from torchvision import datasets
@@ -15,6 +15,7 @@ from shutil import copyfile
 
 from simple_gan import SimpleGAN
 from vector_gan import SimpleGANBezier
+from inception_score import PretrainedInception, frechet_inception_distance
 
 
 class Trainer:
@@ -53,6 +54,9 @@ class Trainer:
 
         self.backup_files()
 
+        self.pretrainedInception = PretrainedInception()
+        self.eval_inception_n_samples = 1000
+
     def create_logs_folder(self):
         if os.path.exists(self.log_dir):
             pass
@@ -70,18 +74,33 @@ class Trainer:
             copyfile(f, self.log_dir + f)
 
     def report_loss(self, g_loss, d_loss, epoch):
-        self.tb_writer.add_scalar(tag="gen loss", scalar_value=g_loss, global_step=epoch)
-        self.tb_writer.add_scalar(tag="disc loss", scalar_value=d_loss, global_step=epoch)
+        self.tb_writer.add_scalar(tag="loss/gen", scalar_value=g_loss, global_step=epoch)
+        self.tb_writer.add_scalar(tag="loss/disc", scalar_value=d_loss, global_step=epoch)
+
+    def report_incpetion_scores(self, inc_score, fid, epoch):
+        self.tb_writer.add_scalar(tag="inception/score", scalar_value=inc_score, global_step=epoch)
+        self.tb_writer.add_scalar(tag="inception/fid", scalar_value=fid, global_step=epoch)
 
     def report_generation(self, epoch, save=True):
         generated = self.model.generator.generate_batch(batch_size=24).detach().cpu()
         image = make_grid(generated, nrow=4)
-        self.tb_writer.add_image('generation', image, global_step=epoch)
+        self.tb_writer.add_image('training/fake', image, global_step=epoch)
         if save:
             plt.imshow(image.permute(1,2,0).numpy(), cmap='Greys')
             plt.title(f"epoch {epoch}")
             plt.axis("off")
             plt.savefig(self.plot_dir+f"{epoch}.png", bbox_inches='tight')
+            plt.close()
+
+    def report_real_images(self, epoch, save=True):
+        real = next(iter(self.dataloader))[0][:24].cpu()
+        image = make_grid(real, nrow=4)
+        self.tb_writer.add_image('training/real', image, global_step=epoch)
+        if save:
+            plt.imshow(image.permute(1,2,0).numpy(), cmap='Greys')
+            plt.title(f"epoch {epoch}")
+            plt.axis("off")
+            plt.savefig(self.plot_dir+f"real_{epoch}.png", bbox_inches='tight')
             plt.close()
 
     def save_checkpoint(self, name):
@@ -174,12 +193,48 @@ class Trainer:
             total_discriminator_loss /= len(self.dataloader)
             self.report_loss(g_loss=total_generator_loss, d_loss=total_discriminator_loss, epoch=i_epoch)
             self.report_generation(epoch=i_epoch)
+            self.report_real_images(epoch=i_epoch)
 
             self.save_checkpoint(name="last_step.pth")
 
             if i_epoch%self.save_freq == self.save_freq-1:
                 self.save_checkpoint(name=f"checkpoint_{i_epoch}.pth")
+
+            inception_score = self.eval_inception_score()
+            fid = self.eval_frechet_inception_ditance()
+            self.report_incpetion_scores(inc_score=inception_score, fid=fid, epoch=i_epoch)
         self.tb_writer.close()
+
+    def eval_inception_score(self):
+        print("Calculating inception score")
+        with torch.no_grad():
+            generated_batch = self.model.generator.generate_batch(batch_size=self.eval_inception_n_samples).\
+                                  repeat(1,3,1,1).cpu().numpy() * 2 - 1
+            score = self.pretrainedInception.inception_score(generated_batch)
+            print(f"Inception score: {score}")
+            return score[0]
+
+    def eval_frechet_inception_ditance(self):
+        print("Calculating FID")
+        n_iters = self.eval_inception_n_samples // self.batch_size
+        real_data = list()
+        fake_data = list()
+        for i, data in enumerate(self.dataloader):
+            real_data.append(data[0].float())
+            with torch.no_grad():
+                fake_data.append(self.model.generator.generate_batch(batch_size=self.batch_size))
+            if i==n_iters:
+                break
+        real_data = torch.cat(real_data, dim=0).repeat(1,3,1,1) * 2 - 1
+        fake_data = torch.cat(fake_data, dim=0).repeat(1,3,1,1) * 2 - 1
+        print("Computing Frechet stats")
+        mu_real, sigma_real = self.pretrainedInception.compute_frechet_stats(real_data, batch_size=self.batch_size)
+        mu_fake, sigma_fake = self.pretrainedInception.compute_frechet_stats(fake_data, batch_size=self.batch_size)
+        print("Computing distance")
+        fid = frechet_inception_distance(mu_real, sigma_real, mu_fake, sigma_fake)
+        print("FID: ", fid)
+        return fid
+
 
 
 def test(n_epochs=20):
@@ -217,5 +272,5 @@ def test_vector(n_epochs):
 
 
 if __name__ == "__main__":
-    test(10)
+    test(100)
     # test_vector()
