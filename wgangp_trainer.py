@@ -167,6 +167,72 @@ class Trainer:
         self.opt_generator.step()
         return loss.item()
 
+    def step_generator_GD(self):
+        """
+        Does a LOGAN-GP latent optimization (gradient descent) step of generator.
+        Idea from LOGAN: Latent Optimisation for Generative Adversarial Networks https://arxiv.org/abs/1912.00953
+        See formula 4 and algorithm 1
+
+        :return: (float) generator loss
+        """
+        alpha = 0.9
+        z_init = self.model.generator.generate_latent(batch_size=self.batch_size)
+        z_init = torch.autograd.Variable(z_init, requires_grad=True)
+        fake_init = self.model.generator.forward(z=z_init)
+        f_init = self.model.discriminator(fake_init)
+        grad_outputs = torch.ones_like(f_init, requires_grad=False)
+        dfdz = torch.autograd.grad(
+            outputs=f_init,
+            inputs=z_init,
+            grad_outputs=grad_outputs,
+            create_graph=True,
+            retain_graph=True
+        )
+        z_new = z_init + alpha * dfdz[0]
+        z_new = torch.clamp(z_new, min=-1.0, max=1.0).detach()
+
+        self.model.train()
+        fake_data = self.model.generator.forward(z=z_new)
+        loss = -torch.mean(self.model.discriminator(fake_data))
+        self.opt_generator.zero_grad()
+        loss.backward()
+        self.opt_generator.step()
+        return loss.item()
+
+    def step_generator_NGD(self):
+        """
+        Does a LOGAN-GP latent optimization (Natural Gradient Descent) step of generator.
+        Idea from LOGAN: Latent Optimisation for Generative Adversarial Networks https://arxiv.org/abs/1912.00953
+        See formula 16 and algorithm 1
+
+        :return: (float) generator loss
+        """
+        alpha = 0.9
+        beta = 0.1
+        z_init = self.model.generator.generate_latent(batch_size=self.batch_size)
+        z_init = torch.autograd.Variable(z_init, requires_grad=True)
+        fake_init = self.model.generator.forward(z=z_init)
+        f_init = self.model.discriminator(fake_init)
+        grad_outputs = torch.ones_like(f_init, requires_grad=False)
+        dfdz = torch.autograd.grad(
+            outputs=f_init,
+            inputs=z_init,
+            grad_outputs=grad_outputs,
+            create_graph=True,
+            retain_graph=True
+        )
+        g = dfdz[0]
+        delta_z = alpha * g / (beta + torch.norm(g))
+        z_new = torch.clamp(z_init + delta_z, min=-1.0, max=1.0).detach()
+
+        self.model.train()
+        fake_data = self.model.generator.forward(z=z_new)
+        loss = -torch.mean(self.model.discriminator(fake_data))
+        self.opt_generator.zero_grad()
+        loss.backward()
+        self.opt_generator.step()
+        return loss.item()
+
     def clip_discriminator(self):
         # WGAN does weight clipping to enforce a Lipschitz constraint
         for param in self.model.discriminator.parameters():
@@ -252,6 +318,8 @@ def test(n_epochs=20):
 
     tr = Trainer(model, dataloader)
     tr.train(n_epochs)
+    tr.step_generator_GD()
+    tr.step_generator_NGD()
 
 
 def test_vector(n_epochs):
@@ -272,5 +340,5 @@ def test_vector(n_epochs):
 
 
 if __name__ == "__main__":
-    test(100)
+    test(2)
     # test_vector()

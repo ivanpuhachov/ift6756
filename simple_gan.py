@@ -33,8 +33,11 @@ class Generator(nn.Module):
         x = x.view(x.shape[0], 1, self.img_size, self.img_size)
         return x
 
+    def generate_latent(self, batch_size):
+        return torch.rand(size=(batch_size, self.latent_dim)).cuda()
+
     def generate_batch(self, batch_size):
-        z = torch.rand(size=(batch_size, self.latent_dim)).cuda()
+        z = self.generate_latent(batch_size=batch_size)
         return self.forward(z)
 
     def forward_return_scene(self, z):
