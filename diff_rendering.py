@@ -19,7 +19,7 @@ def render(canvas_width, canvas_height, shapes, shape_groups, samples=2,
     return img
 
 
-def bezier_render(all_points, all_widths, all_alphas, force_cpu=True,
+def bezier_render(all_points, all_widths, all_alphas, force_cpu=False,
                   canvas_size=32, colors=None):
     dev = all_points.device
     if force_cpu:
@@ -46,11 +46,11 @@ def bezier_render(all_points, all_widths, all_alphas, force_cpu=True,
         shapes = []
         shape_groups = []
         for p in range(num_strokes):
-            points = all_points[k, p].contiguous().cpu()
+            points = all_points[k, p].contiguous().cuda()
             # bezier
             num_ctrl_pts = torch.zeros(num_segments, dtype=torch.int32) + 2
-            width = all_widths[k, p].cpu()
-            alpha = all_alphas[k, p].cpu()
+            width = all_widths[k, p].cuda()
+            alpha = all_alphas[k, p].cuda()
             if colors is not None:
                 color = colors[k, p]
             else:

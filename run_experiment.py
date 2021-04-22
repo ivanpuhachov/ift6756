@@ -19,7 +19,9 @@ from dataset import QuickDrawBitmapDataset
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Train GAN!")
-    parser.add_argument("--dataset", "-d", default="data/full_numpy_bitmap_owl.npy")
+    # parser.add_argument("--dataset", "-d", default="data/full_numpy_bitmap_owl.npy")
+    parser.add_argument("--dataset", "-d", default="data/bitmap_owl_train_32x10000.npy")
+    parser.add_argument("--imgsize", type=int, default=28, help="generated img size, MUST match with dataset img size")
     parser.add_argument("--n_epochs", "-n", type=int, default=1, help="number of training epochs")
     parser.add_argument("--batch", "-b", type=int, default=100, help="batch_size")
     parser.add_argument("--lr", type=float, default=0.00005, help="learning rate")
@@ -36,6 +38,7 @@ if __name__ == "__main__":
         print(f"{key} \t\t {getattr(args, key)}")
 
     dataset_path = args.dataset
+    img_size = args.imgsize
     batch_size = args.batch
     n_epochs = args.n_epochs
     learning_rate = args.lr
@@ -63,7 +66,9 @@ if __name__ == "__main__":
 
     print("\n-- datasets --")
     trainset = QuickDrawBitmapDataset(fpath=dataset_path,
-                                      transform=transforms.Compose([transforms.ToTensor()]))
+                                      transform=transforms.Compose([transforms.ToTensor()]),
+                                      img_size=img_size)
+    assert trainset.img_size == img_size
 
     # trainset = torchvision.datasets.MNIST(
     #         "data/mnist",
@@ -77,7 +82,8 @@ if __name__ == "__main__":
 
     print("\n-- creating model --")
 
-    model = SimpleGAN()
+    # model = SimpleGAN()
+    model = SimpleGANBezier(img_size=img_size)
 
     if use_simplebeziergan:
         model = SimpleGANBezier()
