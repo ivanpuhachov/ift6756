@@ -30,11 +30,13 @@ class Trainer:
         self.dataloader = dataloader
         self.lr = lr
         self.clip_value = clip_value
+        self.clip_gradient = 1.0
         self.gp_weight = gp_weight
         self.batch_size = self.dataloader.batch_size
         self.discriminator_steps = discriminator_steps
-        self.opt_generator = torch.optim.RMSprop(self.model.generator.parameters(), lr=self.lr)
-        self.opt_discriminator = torch.optim.RMSprop(self.model.discriminator.parameters(), lr=self.lr)
+        beta1, beta2 = 0.5, 0.9
+        self.opt_generator = torch.optim.Adam(self.model.generator.parameters(), lr=self.lr, betas=(beta1, beta2))
+        self.opt_discriminator = torch.optim.Adam(self.model.discriminator.parameters(), lr=self.lr, betas=(beta1, beta2))
 
         self.files_to_backup = ['wgangp_trainer.py', 'diff_rendering.py', 'simple_gan.py', 'vector_gan.py', 'dataset.py']
         self.files_to_backup.extend(files_to_backup)
@@ -153,6 +155,7 @@ class Trainer:
         loss = loss_true + loss_fake
         self.opt_discriminator.zero_grad()
         loss.backward()
+        torch.nn.utils.clip_grad_norm_(self.model.discriminator.parameters(), self.clip_gradient)
         self.opt_discriminator.step()
         return loss.item(), loss_true.item(), loss_fake.item()
 
@@ -161,6 +164,7 @@ class Trainer:
         loss = -torch.mean(self.model.discriminator(fake_data))
         self.opt_generator.zero_grad()
         loss.backward()
+        torch.nn.utils.clip_grad_norm_(self.model.generator.parameters(), self.clip_gradient)
         self.opt_generator.step()
         return loss.item()
 
@@ -192,6 +196,7 @@ class Trainer:
         loss = -torch.mean(self.model.discriminator(fake_data))
         self.opt_generator.zero_grad()
         loss.backward()
+        torch.nn.utils.clip_grad_norm_(self.model.generator.parameters(), self.clip_gradient)
         self.opt_generator.step()
         return loss.item()
 
@@ -225,6 +230,7 @@ class Trainer:
         loss = -torch.mean(self.model.discriminator(fake_data))
         self.opt_generator.zero_grad()
         loss.backward()
+        torch.nn.utils.clip_grad_norm_(self.model.generator.parameters(), self.clip_gradient)
         self.opt_generator.step()
         return loss.item()
 
@@ -360,6 +366,7 @@ class WGANGP_Trainer(WGAN_Trainer):
         loss = loss_true + loss_fake + self.gp_weight * loss_gp
         self.opt_discriminator.zero_grad()
         loss.backward()
+        torch.nn.utils.clip_grad_norm_(self.model.discriminator.parameters(), self.clip_gradient)
         self.opt_discriminator.step()
         return loss.item(), loss_true.item(), loss_fake.item(), loss_gp.item()
 
