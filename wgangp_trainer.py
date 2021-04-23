@@ -1,7 +1,9 @@
 import torch
+import numpy as np
 
 from torch.utils.data import DataLoader, TensorDataset
 from torch.utils.tensorboard import SummaryWriter
+import visdom
 
 from torchvision import datasets
 import torchvision.transforms as transforms
@@ -54,10 +56,18 @@ class Trainer:
         self.plot_dir = self.log_dir + "plots/"
         self.checkpoint_dir = self.log_dir + "checkpoints/"
 
+        self.visdom = visdom.Visdom()
+        self.visdom.line(Y=np.column_stack((0,0,0)), X=np.column_stack((0, 0, 0)), win='discriminator', opts=dict(title='disc', legend=['real', 'fake', 'penalty']))
+        self.visdom.line([[0]], [0], win='generator', opts=dict(title='gen', legend=['loss']))
+        self.do_visdom = True
+        self.visdom_freq = self.discriminator_steps * 2
+
         self.backup_files()
 
         self.pretrainedInception = PretrainedInception()
         self.eval_inception_n_samples = 500
+
+        self.n_epoch_done = 0
 
     def create_logs_folder(self):
         if os.path.exists(self.log_dir):
@@ -105,6 +115,22 @@ class Trainer:
             plt.savefig(self.plot_dir+f"real_{epoch}.png", bbox_inches='tight')
             plt.close()
 
+    def report_running_generator(self, fake, loss, iteration):
+        if (iteration % self.visdom_freq == 0) and self.do_visdom:
+            self.visdom.line([loss], [iteration + self.n_epoch_done*len(self.dataloader)], win='generator', update='append')
+            self.visdom.images(fake, win='generated', opts={"title": "Generated"})
+
+    def report_running_discriminator(self, real, losses, iteration):
+        """
+        losses = (real, fake, penalty)
+        """
+        if (iteration % self.visdom_freq == 0) and self.do_visdom:
+            ix = iteration + self.n_epoch_done * len(self.dataloader)
+            iy = (losses[0], losses[1], losses[2])
+            self.visdom.line(Y=np.column_stack(iy), X=np.column_stack((ix, ix, ix)),
+                             win='discriminator', update='append')
+            self.visdom.images(real, win='real', opts={"title": "real"})
+
     def save_checkpoint(self, name):
         path = self.checkpoint_dir + name
         print(f"Saving model to {path}")
@@ -145,7 +171,7 @@ class Trainer:
         penalty = torch.mean((gradient_norms - 0)**2)
         return penalty
 
-    def step_discriminator(self, data):
+    def step_discriminator(self, data, iteration):
         batch_size = data.shape[0]
         fake_data = self.model.generator.generate_batch(batch_size=batch_size).detach()
         decision_true = self.model.discriminator(data)
@@ -157,15 +183,18 @@ class Trainer:
         loss.backward()
         torch.nn.utils.clip_grad_norm_(self.model.discriminator.parameters(), self.clip_gradient)
         self.opt_discriminator.step()
+        self.report_running_discriminator(real=data, losses=(loss_true.item(), loss_fake.item(), 0),
+                                          iteration=iteration)
         return loss.item(), loss_true.item(), loss_fake.item()
 
-    def step_generator(self):
+    def step_generator(self, iteration):
         fake_data = self.model.generator.generate_batch(batch_size=self.batch_size)
         loss = -torch.mean(self.model.discriminator(fake_data))
         self.opt_generator.zero_grad()
         loss.backward()
         torch.nn.utils.clip_grad_norm_(self.model.generator.parameters(), self.clip_gradient)
         self.opt_generator.step()
+        self.report_running_generator(fake=fake_data.detach(), loss=loss.item(), iteration=iteration)
         return loss.item()
 
     def step_generator_GD(self):
@@ -270,6 +299,7 @@ class Trainer:
             inception_score = self.eval_inception_score()
             fid = self.eval_frechet_inception_ditance()
             self.report_incpetion_scores(inc_score=inception_score, fid=fid, epoch=i_epoch)
+            self.n_epoch_done += 1
         self.tb_writer.close()
 
     def eval_inception_score(self):
@@ -315,11 +345,11 @@ class Vanilla_Trainer(Trainer):
 
     def training_routine(self, iteration, data):
         gen_loss, disc_loss = 0, 0
-        losses_discriminator = self.step_discriminator(data=data)
+        losses_discriminator = self.step_discriminator(data=data, iteration=iteration)
         disc_loss += losses_discriminator[0]
 
         if iteration % self.discriminator_steps == 0:
-            gen_loss += self.step_generator()
+            gen_loss += self.step_generator(iteration=iteration)
         return gen_loss, disc_loss
 
 class WGAN_Trainer(Trainer):
@@ -334,13 +364,13 @@ class WGAN_Trainer(Trainer):
 
     def training_routine(self, iteration, data):
         gen_loss, disc_loss = 0, 0
-        losses_discriminator = self.step_discriminator(data=data)
+        losses_discriminator = self.step_discriminator(data=data, iteration=iteration)
         disc_loss += losses_discriminator[0]
 
         self.clip_discriminator()
 
         if iteration % self.discriminator_steps == 0:
-            gen_loss += self.step_generator()
+            gen_loss += self.step_generator(iteration=iteration)
         return gen_loss, disc_loss
 
 
@@ -355,7 +385,7 @@ class WGANGP_Trainer(WGAN_Trainer):
         super(WGANGP_Trainer, self).__init__(model, dataloader, lr, clip_value, gp_weight, discriminator_steps,
                                           files_to_backup, save_freq, log_dir)
 
-    def step_discriminator(self, data):
+    def step_discriminator(self, data, iteration):
         batch_size = data.shape[0]
         fake_data = self.model.generator.generate_batch(batch_size=batch_size).detach()
         decision_true = self.model.discriminator(data)
@@ -368,6 +398,8 @@ class WGANGP_Trainer(WGAN_Trainer):
         loss.backward()
         torch.nn.utils.clip_grad_norm_(self.model.discriminator.parameters(), self.clip_gradient)
         self.opt_discriminator.step()
+        self.report_running_discriminator(real=data, losses=(loss_true.item(), loss_fake.item(), loss_gp.item()),
+                                          iteration=iteration)
         return loss.item(), loss_true.item(), loss_fake.item(), loss_gp.item()
 
 
@@ -383,7 +415,7 @@ class LOGAN_GD_Trainer(Trainer):
 
     def training_routine(self, iteration, data):
         gen_loss, disc_loss = 0, 0
-        losses_discriminator = self.step_discriminator(data=data)
+        losses_discriminator = self.step_discriminator(data=data, iteration=iteration)
         disc_loss += losses_discriminator[0]
 
         self.clip_discriminator()
@@ -405,7 +437,7 @@ class LOGAN_NGD_Trainer(Trainer):
 
     def training_routine(self, iteration, data):
         gen_loss, disc_loss = 0, 0
-        losses_discriminator = self.step_discriminator(data=data)
+        losses_discriminator = self.step_discriminator(data=data, iteration=iteration)
         disc_loss += losses_discriminator[0]
 
         self.clip_discriminator()
