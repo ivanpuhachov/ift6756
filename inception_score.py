@@ -11,6 +11,7 @@ import torchvision.transforms as transforms
 import numpy as np
 import scipy
 from scipy.stats import entropy
+from tqdm import tqdm
 
 
 class PretrainedInception(nn.Module):
@@ -38,12 +39,13 @@ class PretrainedInception(nn.Module):
 
     def get_last_features(self, x):
         outs = self.forward_no_grad(x)
-        return self.avg_pooling(self.last_features).squeeze(2).squeeze(2)
+        with torch.no_grad():
+            return self.avg_pooling(self.last_features).squeeze(2).squeeze(2)
 
     def compute_frechet_stats(self, imgs, batch_size=32):
         dataloader = torch.utils.data.DataLoader(imgs, batch_size=batch_size)
         features = list()
-        for i, data in enumerate(dataloader):
+        for i, data in tqdm(enumerate(dataloader), total=len(dataloader)):
             features.append(self.get_last_features(data.to(self.device)))
         features = torch.cat(features, dim=0).cpu().numpy()
         mu = np.mean(features, axis=0)

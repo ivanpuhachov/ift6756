@@ -55,7 +55,7 @@ class Trainer:
         self.backup_files()
 
         self.pretrainedInception = PretrainedInception()
-        self.eval_inception_n_samples = 1000
+        self.eval_inception_n_samples = 500
 
     def create_logs_folder(self):
         if os.path.exists(self.log_dir):
@@ -289,8 +289,8 @@ class Trainer:
         real_data = torch.cat(real_data, dim=0).repeat(1,3,1,1) * 2 - 1
         fake_data = torch.cat(fake_data, dim=0).repeat(1,3,1,1) * 2 - 1
         print("Computing Frechet stats")
-        mu_real, sigma_real = self.pretrainedInception.compute_frechet_stats(real_data, batch_size=self.batch_size)
-        mu_fake, sigma_fake = self.pretrainedInception.compute_frechet_stats(fake_data, batch_size=self.batch_size)
+        mu_real, sigma_real = self.pretrainedInception.compute_frechet_stats(real_data, batch_size=25)
+        mu_fake, sigma_fake = self.pretrainedInception.compute_frechet_stats(fake_data, batch_size=25)
         print("Computing distance")
         fid = frechet_inception_distance(mu_real, sigma_real, mu_fake, sigma_fake)
         print("FID: ", fid)
