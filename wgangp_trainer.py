@@ -26,7 +26,7 @@ class Trainer:
                  lr=0.00005, clip_value=0.01, gp_weight=10.0,
                  discriminator_steps=5,
                  files_to_backup=list(),
-                 save_freq=10,
+                 save_freq=2,
                  log_dir=None):
         self.model = model.cuda()
         self.dataloader = dataloader
@@ -38,10 +38,12 @@ class Trainer:
         self.batch_size = self.dataloader.batch_size
         self.discriminator_steps = discriminator_steps
         beta1, beta2 = 0.5, 0.9
-        self.opt_generator = torch.optim.Adam(self.model.generator.parameters(), lr=self.lr, betas=(beta1, beta2))
+        self.opt_generator = torch.optim.Adam(self.model.generator.parameters(), lr=self.lr/2, betas=(beta1, beta2))
+        self.lr_sch_generator = torch.optim.lr_scheduler.ExponentialLR(self.opt_generator, 0.9999)
         self.opt_discriminator = torch.optim.Adam(self.model.discriminator.parameters(), lr=self.lr, betas=(beta1, beta2))
+        self.lr_sch_discriminator = torch.optim.lr_scheduler.ExponentialLR(self.opt_discriminator, 0.9999)
 
-        self.files_to_backup = ['wgangp_trainer.py', 'diff_rendering.py', 'simple_gan.py', 'vector_gan.py', 'dataset.py']
+        self.files_to_backup = ['inception_score.py', 'wgangp_trainer.py', 'diff_rendering.py', 'simple_gan.py', 'vector_gan.py', 'dataset.py']
         self.files_to_backup.extend(files_to_backup)
 
         self.save_freq = save_freq
@@ -61,7 +63,7 @@ class Trainer:
         self.visdom.line(Y=np.column_stack((0,0,0)), X=np.column_stack((0, 0, 0)), win='discriminator', opts=dict(title='disc', legend=['real', 'fake', 'penalty']))
         self.visdom.line([[0]], [0], win='generator', opts=dict(title='gen', legend=['loss']))
         self.do_visdom = True
-        self.visdom_freq = self.discriminator_steps * 2
+        self.visdom_freq = self.discriminator_steps * 20
 
         self.backup_files()
 
@@ -198,7 +200,7 @@ class Trainer:
         self.report_running_generator(fake=fake_data.detach(), loss=loss.item(), iteration=iteration)
         return loss.item()
 
-    def step_generator_GD(self):
+    def step_generator_GD(self, iteration):
         """
         Does a LOGAN-GP latent optimization (gradient descent) step of generator.
         Idea from LOGAN: Latent Optimisation for Generative Adversarial Networks https://arxiv.org/abs/1912.00953
@@ -228,9 +230,10 @@ class Trainer:
         loss.backward()
         torch.nn.utils.clip_grad_norm_(self.model.generator.parameters(), self.clip_gradient)
         self.opt_generator.step()
+        self.report_running_generator(fake=fake_data.detach(), loss=loss.item(), iteration=iteration)
         return loss.item()
 
-    def step_generator_NGD(self):
+    def step_generator_NGD(self, iteration):
         """
         Does a LOGAN-GP latent optimization (Natural Gradient Descent) step of generator.
         Idea from LOGAN: Latent Optimisation for Generative Adversarial Networks https://arxiv.org/abs/1912.00953
@@ -262,6 +265,7 @@ class Trainer:
         loss.backward()
         torch.nn.utils.clip_grad_norm_(self.model.generator.parameters(), self.clip_gradient)
         self.opt_generator.step()
+        self.report_running_generator(fake=fake_data.detach(), loss=loss.item(), iteration=iteration)
         return loss.item()
 
     def clip_discriminator(self):
@@ -284,6 +288,8 @@ class Trainer:
                 gen_loss, disc_loss = self.training_routine(iteration=i, data=data[0].float().cuda())
                 total_generator_loss += gen_loss
                 total_discriminator_loss += disc_loss
+            self.lr_sch_generator.step()
+            self.lr_sch_discriminator.step()
 
             self.model.eval()
             total_generator_loss /= len(self.dataloader)
@@ -403,7 +409,6 @@ class WGANGP_Trainer(WGAN_Trainer):
                                           iteration=iteration)
         return loss.item(), loss_true.item(), loss_fake.item(), loss_gp.item()
 
-
 class LOGAN_GD_Trainer(Trainer):
     def __init__(self,
                  model: SimpleGAN, dataloader,
@@ -422,7 +427,7 @@ class LOGAN_GD_Trainer(Trainer):
         self.clip_discriminator()
 
         if iteration % self.discriminator_steps == 0:
-            gen_loss += self.step_generator_GD()
+            gen_loss += self.step_generator_GD(iteration)
         return gen_loss, disc_loss
 
 
@@ -444,7 +449,7 @@ class LOGAN_NGD_Trainer(Trainer):
         self.clip_discriminator()
 
         if iteration % self.discriminator_steps == 0:
-            gen_loss += self.step_generator_NGD()
+            gen_loss += self.step_generator_NGD(iteration)
         return gen_loss, disc_loss
 
 
@@ -482,8 +487,8 @@ class GTTrainer(Trainer):
     """
     def __init__(self,
                  model: SimpleGAN, dataloader,
-                 lr=0.00005, clip_value=0.01, gp_weight=10.0,
-                 discriminator_steps=5,
+                 lr=0.0001, clip_value=0.01, gp_weight=10.0,
+                 discriminator_steps=4,
                  files_to_backup=list(),
                  save_freq=10,
                  log_dir=None):
@@ -592,8 +597,8 @@ def test(n_epochs=20):
     # tr = Vanilla_Trainer(model, dataloader)
     # tr = WGAN_Trainer(model, dataloader)
     # tr = WGANGP_Trainer(model, dataloader)
-    # tr = LOGAN_GD_Trainer(model, dataloader)
-    tr = LOGAN_NGD_Trainer(model, dataloader)
+    tr = LOGAN_GD_Trainer(model, dataloader, discriminator_steps=5)
+    # tr = GTTrainer(model, dataloader, discriminator_steps=4)
     tr.train(n_epochs)
 
 
