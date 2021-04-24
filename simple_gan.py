@@ -14,16 +14,16 @@ class Generator(nn.Module):
 
         self.flat_layers = nn.Sequential(
             nn.Linear(self.latent_dim, 128),
-            nn.LeakyReLU(0.1),
+            nn.SELU(),
             nn.Linear(128, 256, bias=False),
-            nn.BatchNorm1d(256),
-            nn.LeakyReLU(0.1),
+            # nn.BatchNorm1d(256),
+            nn.SELU(),
             nn.Linear(256, 512, bias=False),
-            nn.BatchNorm1d(512),
-            nn.LeakyReLU(0.1),
+            # nn.BatchNorm1d(512),
+            nn.SELU(),
             nn.Linear(512, self.flat_out, bias=False),
-            nn.BatchNorm1d(self.flat_out),
-            nn.LeakyReLU(0.1),
+            # nn.BatchNorm1d(self.flat_out),
+            nn.SELU(),
         )
 
         self.last_layer = nn.Linear(self.flat_out, self.img_size**2)

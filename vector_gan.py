@@ -11,7 +11,7 @@ class VectorGeneratorBezier(Generator):
     """
     Generator with diff rasterizer inside.
     """
-    def __init__(self, num_segments=2, n_strokes=20, latent_dim=100, img_size=32):
+    def __init__(self, num_segments=2, n_strokes=16, latent_dim=100, img_size=32):
         """
         Init generator with diff rasterizer inside. Objects: Bezier curves
 
@@ -103,6 +103,31 @@ class ConvDiscriminator(Discriminator):
         return y
 
 
+class ConvSNDiscriminator(ConvDiscriminator):
+    def __init__(self, img_size=64):
+        super(ConvSNDiscriminator, self).__init__(img_size=img_size)
+        sn = nn.utils.spectral_norm
+        width = img_size
+        self.conv_layers = torch.nn.Sequential(
+            nn.Conv2d(1, width, 3, padding=1),
+            nn.LeakyReLU(0.2, inplace=True),
+            nn.Conv2d(width, 2 * width, 4, padding=1, stride=2),
+            nn.LeakyReLU(0.2, inplace=True),
+
+            sn(nn.Conv2d(2 * width, 2 * width, 3, padding=1)),
+            nn.LeakyReLU(0.2, inplace=True),
+            sn(nn.Conv2d(2 * width, 4 * width, 4, padding=1, stride=2)),
+            nn.LeakyReLU(0.2, inplace=True),
+
+            sn(nn.Conv2d(4 * width, 4 * width, 3, padding=1)),
+            nn.LeakyReLU(0.2, inplace=True),
+            sn(nn.Conv2d(4 * width, width * 4, 3, padding=1)),
+            nn.LeakyReLU(0.2, inplace=True),
+
+            nn.Conv2d(in_channels=4*width, out_channels=1, kernel_size=1)
+        )
+
+
 class SimpleGANBezier(SimpleGAN):
     def __init__(self, latent_dim=100, img_size=28):
         super(SimpleGANBezier, self).__init__(latent_dim=latent_dim, img_size=img_size)
@@ -115,10 +140,16 @@ class BezierGAN(SimpleGAN):
         self.generator = VectorGeneratorBezier(img_size=img_size, latent_dim=latent_dim)
         self.discriminator = ConvDiscriminator(img_size=img_size)
 
+class BezierSNGAN(SimpleGAN):
+    def __init__(self, latent_dim=100, img_size=28):
+        super(BezierSNGAN, self).__init__(latent_dim=latent_dim, img_size=img_size)
+        self.generator = VectorGeneratorBezier(img_size=img_size, latent_dim=latent_dim)
+        self.discriminator = ConvSNDiscriminator(img_size=img_size)
+
 
 def test():
     gen = VectorGeneratorBezier(img_size=28).to('cuda')
-    disc = ConvDiscriminator(img_size=28).to('cuda')
+    disc = ConvSNDiscriminator(img_size=28).to('cuda')
     img = gen.generate_batch(batch_size=2)
     print(img.shape)
     plt.imshow(img[0][0].detach().cpu().numpy(), cmap='gray_r')
