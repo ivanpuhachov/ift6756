@@ -43,7 +43,8 @@ class Trainer:
         self.opt_discriminator = torch.optim.Adam(self.model.discriminator.parameters(), lr=self.lr, betas=(beta1, beta2))
         self.lr_sch_discriminator = torch.optim.lr_scheduler.ExponentialLR(self.opt_discriminator, 0.9999)
 
-        self.files_to_backup = ['inception_score.py', 'wgangp_trainer.py', 'diff_rendering.py', 'simple_gan.py', 'vector_gan.py', 'dataset.py']
+        self.files_to_backup = ['run_experiment.py', 'inception_score.py', 'wgangp_trainer.py',
+                                'diff_rendering.py', 'simple_gan.py', 'vector_gan.py', 'dataset.py']
         self.files_to_backup.extend(files_to_backup)
 
         self.save_freq = save_freq
