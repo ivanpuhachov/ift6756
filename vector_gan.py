@@ -23,7 +23,7 @@ class VectorGeneratorBezier(Generator):
         super(VectorGeneratorBezier, self).__init__(latent_dim=latent_dim, img_size=img_size)
         self.num_segments = num_segments
         self.n_strokes = n_strokes
-        self.width_limits = (0.5, 3.5)
+        self.width_limits = (0.5, 4.5)
 
         # each bezier curves takes 3 x segments points + init point (each point = pair of coords)
         self.linear_points = nn.Sequential(
@@ -103,9 +103,9 @@ class ConvDiscriminator(Discriminator):
         return y
 
 
-class ConvSNDiscriminator(ConvDiscriminator):
+class ConvSNDiscriminator(Discriminator):
     def __init__(self, img_size=64):
-        super(ConvSNDiscriminator, self).__init__(img_size=img_size)
+        super(ConvSNDiscriminator, self).__init__(img_size=img_size//16)
         sn = nn.utils.spectral_norm
         width = img_size
         self.conv_layers = torch.nn.Sequential(
@@ -121,11 +121,22 @@ class ConvSNDiscriminator(ConvDiscriminator):
 
             sn(nn.Conv2d(4 * width, 4 * width, 3, padding=1)),
             nn.LeakyReLU(0.2, inplace=True),
-            sn(nn.Conv2d(4 * width, width * 4, 3, padding=1)),
+            sn(nn.Conv2d(4 * width, width * 4, 4, padding=1, stride=2)),
+            nn.LeakyReLU(0.2, inplace=True),
+
+            sn(nn.Conv2d(4 * width, 4 * width, 3, padding=1)),
+            nn.LeakyReLU(0.2, inplace=True),
+            sn(nn.Conv2d(4 * width, width * 4, 4, padding=1, stride=2)),
             nn.LeakyReLU(0.2, inplace=True),
 
             nn.Conv2d(in_channels=4*width, out_channels=1, kernel_size=1)
         )
+
+    def forward(self, x):
+        batch_size = x.shape[0]
+        x = self.conv_layers(x).view(batch_size, -1)
+        y = self.flat_layers(x)
+        return y
 
 
 class SimpleGANBezier(SimpleGAN):
@@ -148,8 +159,8 @@ class BezierSNGAN(SimpleGAN):
 
 
 def test():
-    gen = VectorGeneratorBezier(img_size=28).to('cuda')
-    disc = ConvSNDiscriminator(img_size=28).to('cuda')
+    gen = VectorGeneratorBezier(img_size=96).to('cuda')
+    disc = ConvSNDiscriminator(img_size=96).to('cuda')
     img = gen.generate_batch(batch_size=2)
     print(img.shape)
     plt.imshow(img[0][0].detach().cpu().numpy(), cmap='gray_r')
