@@ -14,7 +14,7 @@ from shutil import copyfile
 
 from wgangp_trainer import Trainer, WGAN_Trainer, WGANGP_Trainer, LOGAN_GD_Trainer, LOGAN_NGD_Trainer, GTTrainer, AllIncluded_Trainer
 from simple_gan import SimpleGAN
-from vector_gan import SimpleGANBezier, BezierGAN, BezierSNGAN
+from vector_gan import SimpleGANBezier, BezierGAN, BezierSNGAN, AwesomeBezierGAN
 from dataset import QuickDrawBitmapDataset
 
 if __name__ == "__main__":
@@ -22,7 +22,7 @@ if __name__ == "__main__":
     # parser.add_argument("--dataset", "-d", default="data/full_numpy_bitmap_owl.npy")
     parser.add_argument("--dataset", "-d", default="data/bitmap_owl_train_96x5000.npy")
     parser.add_argument("--imgsize", type=int, default=64, help="generated img size, MUST match with dataset img size")
-    parser.add_argument("--n_epochs", "-n", type=int, default=60, help="number of training epochs")
+    parser.add_argument("--n_epochs", "-n", type=int, default=40, help="number of training epochs")
     parser.add_argument("--batch", "-b", type=int, default=4, help="batch_size")
     parser.add_argument("--lr", type=float, default=1e-4, help="learning rate")
     parser.add_argument("--seed", type=int, default=23, help='random seed')
@@ -38,7 +38,7 @@ if __name__ == "__main__":
         print(f"{key} \t\t {getattr(args, key)}")
     # datasets_names = ['apple', 'carrot', 'cat', 'fish', 'owl', 'creativebirds']
     # datasets_names = ['apple', 'carrot', 'cat', 'fish', 'owl']
-    datasets_names = ['apple', 'donut', 'lightbulb', 'lollipop']
+    datasets_names = ['apple', 'donut', 'cookie', 'face', 'lollipop']
     dataset_path = args.dataset
     img_size = args.imgsize
     batch_size = args.batch
@@ -100,7 +100,8 @@ if __name__ == "__main__":
 
     # model = SimpleGAN()
     # model = SimpleGANBezier(img_size=img_size)
-    model = BezierSNGAN(img_size=img_size)
+    # model = BezierSNGAN(img_size=img_size)
+    model = AwesomeBezierGAN(img_size=img_size, n_circles=5)
 
     if use_simplebeziergan:
         model = SimpleGANBezier()

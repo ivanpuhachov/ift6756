@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 
 from simple_gan import SimpleGAN, Generator, Discriminator
-from diff_rendering import bezier_render
+from diff_rendering import bezier_render, my_render
 
 import matplotlib.pyplot as plt
 
@@ -61,6 +61,102 @@ class VectorGeneratorBezier(Generator):
             all_points=points,
             all_widths=widths,
             all_alphas=alphas,
+            colors=None,
+            canvas_size=self.img_size)
+
+        return images, scenes
+
+    def forward(self, z):
+        images, scenes = self.forward_return_scene(z)
+        return images
+
+
+class VectorGeneratorBezierCircles(Generator):
+    def __init__(self, num_segments=2, n_strokes=16,
+                 n_circles=2,
+                 latent_dim=100, img_size=32):
+        """
+        New generator with additional circles
+
+        :param num_segments:
+        :param n_strokes:
+        :param n_circles:
+        :param latent_dim:
+        :param img_size:
+        """
+        super(VectorGeneratorBezierCircles, self).__init__(latent_dim=latent_dim, img_size=img_size)
+        self.num_segments = num_segments
+        self.n_circles = n_circles
+        self.n_strokes = n_strokes
+        self.width_limits = (0.5, 4.5)
+
+        self.circle_centers = nn.Sequential(
+            nn.Linear(self.flat_out,
+                      out_features=self.n_circles*2),
+            nn.Tanh()
+        )
+
+        self.circle_widths = nn.Sequential(
+            nn.Linear(self.flat_out,
+                      self.n_circles),
+            nn.Sigmoid()
+        )
+
+        self.circle_radius = nn.Sequential(
+            nn.Linear(self.flat_out,
+                      self.n_circles),
+            nn.Sigmoid()
+        )
+
+        self.circle_alphas = nn.Sequential(
+            nn.Linear(self.flat_out,
+                      self.n_circles),
+            nn.Sigmoid()
+        )
+
+        # each bezier curves takes 3 x segments points + init point (each point = pair of coords)
+        self.linear_points = nn.Sequential(
+            nn.Linear(self.flat_out,
+                      out_features=self.n_strokes*(self.num_segments*2*3 + 2)),
+            nn.Tanh()
+        )
+
+        # each curve has width
+        self.linear_widths = nn.Sequential(
+            nn.Linear(self.flat_out,
+                      self.n_strokes),
+            nn.Sigmoid()
+        )
+
+        # each curve has alpha
+        self.linear_alphas = nn.Sequential(
+            nn.Linear(self.flat_out,
+                      self.n_strokes),
+            nn.Sigmoid()
+        )
+
+    def forward_return_scene(self, z):
+        batch_size = z.shape[0]
+
+        x = self.flat_layers(z)
+
+        points = self.linear_points(x).view(batch_size, self.n_strokes, self.num_segments*3+1, 2)
+        widths = self.linear_widths(x) * (self.width_limits[1] - self.width_limits[0]) + self.width_limits[0]
+        alphas = self.linear_alphas(x)
+
+        centers = self.circle_centers(x).view(batch_size, self.n_circles, 2)
+        circle_radius = self.circle_radius(x)
+        circle_widths = self.circle_widths(x) * (self.width_limits[1] - self.width_limits[0]) + self.width_limits[0]
+        circle_alphas = self.circle_alphas(x)
+
+        images, scenes = my_render(
+            curve_points=points,
+            curve_widths=widths,
+            curve_alphas=alphas,
+            circle_centers=centers,
+            circle_radiuses=circle_radius,
+            circle_widths=circle_widths,
+            circle_alphas=circle_alphas,
             colors=None,
             canvas_size=self.img_size)
 
@@ -151,6 +247,7 @@ class BezierGAN(SimpleGAN):
         self.generator = VectorGeneratorBezier(img_size=img_size, latent_dim=latent_dim)
         self.discriminator = ConvDiscriminator(img_size=img_size)
 
+
 class BezierSNGAN(SimpleGAN):
     def __init__(self, latent_dim=100, img_size=28):
         super(BezierSNGAN, self).__init__(latent_dim=latent_dim, img_size=img_size)
@@ -158,13 +255,22 @@ class BezierSNGAN(SimpleGAN):
         self.discriminator = ConvSNDiscriminator(img_size=img_size)
 
 
+class AwesomeBezierGAN(SimpleGAN):
+    def __init__(self, latent_dim=100, img_size=28, n_curves=16, n_circles=2):
+        super(AwesomeBezierGAN, self).__init__(latent_dim=latent_dim, img_size=img_size)
+        self.generator = VectorGeneratorBezierCircles(img_size=img_size, latent_dim=latent_dim,
+                                                      n_strokes=n_curves, n_circles=n_circles)
+        self.discriminator = ConvSNDiscriminator(img_size=img_size)
+
+
 def test():
-    gen = VectorGeneratorBezier(img_size=96).to('cuda')
+    # gen = VectorGeneratorBezier(img_size=96).to('cuda')
+    gen = VectorGeneratorBezierCircles(img_size=96).to('cuda')
     disc = ConvSNDiscriminator(img_size=96).to('cuda')
     img = gen.generate_batch(batch_size=2)
     print(img.shape)
     plt.imshow(img[0][0].detach().cpu().numpy(), cmap='gray_r')
-    plt.axis('off')
+    # plt.axis('off')
     plt.colorbar()
     plt.show()
     y = disc(img)
