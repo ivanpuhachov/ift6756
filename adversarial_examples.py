@@ -13,9 +13,11 @@ import json
 
 
 class AdversarialCreator:
-    def __init__(self, num_paths=100, n_path_segments=3, max_width=4.0):
+    def __init__(self, num_paths=100, n_path_segments=3, max_width=4.0, min_width=1.0):
         self.num_paths = 100
         self.max_width = max_width
+        self.min_width = min_width
+        assert self.max_width > self.min_width
         self.n_path_segments = n_path_segments
 
         self.classification_model = models.inception_v3(pretrained=True, transform_input=False).cuda()
@@ -23,6 +25,7 @@ class AdversarialCreator:
 
         self.canvas_width = 229  # sync with inception model inputs
         self.canvas_height = 229
+        self.frequency_plot = 100
 
         self.shapes = list()
         self.shape_groups = list()
@@ -47,7 +50,7 @@ class AdversarialCreator:
             points[:, 1] *= self.canvas_height
             path = pydiffvg.Path(num_control_points=num_control_points,
                                  points=points,
-                                 stroke_width=torch.tensor(1.0),
+                                 stroke_width=torch.tensor(0.5*(self.max_width - self.min_width)),
                                  is_closed=False)
             self.shapes.append(path)
             path_group = pydiffvg.ShapeGroup(shape_ids=torch.tensor([len(self.shapes) - 1]),
@@ -125,11 +128,11 @@ class AdversarialCreator:
             optim_widths.step()
             optim_color.step()
             for path in self.shapes:
-                path.stroke_width.data.clamp_(1.0, self.max_width)
+                path.stroke_width.data.clamp_(self.min_width, self.max_width)
             for group in self.shape_groups:
                 group.stroke_color.data.clamp_(0.0, 1.0)
 
-            if iteration % 50 == 49:
+            if iteration % self.frequency_plot == self.frequency_plot-1:
                 self.plot()
 
     def adversarialExample(self, num_steps=100, target_class=291):
@@ -141,6 +144,10 @@ class AdversarialCreator:
         :param target_class:
         :return:
         """
+
+        label_idx, labelname, label_value = self.compute_current_label()
+        self.plot(title=f"{labelname} ({label_value:.1f})")
+
         optim_points = torch.optim.Adam(self.point_variables, lr=0.01)
         optim_widths = torch.optim.Adam(self.widths_variables, lr=0.01)
         optim_color = torch.optim.Adam(self.color_variables, lr=0.00005)
@@ -160,13 +167,13 @@ class AdversarialCreator:
 
             optim_points.step()
             optim_widths.step()
-            optim_color.step()
+            # optim_color.step()
             for path in self.shapes:
-                path.stroke_width.data.clamp_(1.0, self.max_width)
+                path.stroke_width.data.clamp_(self.min_width, self.max_width)
             for group in self.shape_groups:
                 group.stroke_color.data.clamp_(0.0, 1.0)
 
-            if iteration % 50 == 49:
+            if iteration % self.frequency_plot == self.frequency_plot-1:
                 label_idx, labelname, label_value = self.get_current_label(class_output=output)
                 self.plot(title=f"{labelname} ({label_value:.1f})")
 
@@ -226,7 +233,8 @@ class AdversarialCreator:
 
 if __name__ == "__main__":
     # pydiffvg.set_print_timing(True)
-    creator = AdversarialCreator(num_paths=100, n_path_segments=2)
-    creator.plot()
-    creator.fit_to_image(img_path='data/lion3.jpg', n_iterations=100)
-    creator.adversarialExample(num_steps=1000, target_class=293)
+    creator = AdversarialCreator(num_paths=100, n_path_segments=2, max_width=6, min_width=2)
+    creator.plot(title='init')
+    # creator.fit_to_image(img_path='images/lion3.jpg', n_iterations=100)
+    creator.fit_to_image(img_path='images/picasso3.png', n_iterations=500)
+    creator.adversarialExample(num_steps=1000, target_class=1)
