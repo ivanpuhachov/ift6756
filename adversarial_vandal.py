@@ -31,21 +31,23 @@ class AdversarialVandal(AdversarialCreator):
         img = torch.clamp(img, min=0, max=1.0)
         return img
 
-    def plot(self, title=None):
+    def plot(self, title=None, name=None):
         with torch.no_grad():
             img = self.render_vandalized_img()
         plt.imshow(img.detach().cpu())
         plt.title(title)
         plt.axis('off')
+        if name is not None:
+            plt.savefig(name, bbox_inches='tight', dpi=150)
         plt.show()
 
     def vandalize_image(self, target_class=51, num_steps=100):
         label_idx, labelname, label_value = self.compute_current_label()
         self.plot(title=f"{labelname} ({label_value:.1f})")
 
-        optim_points = torch.optim.Adam(self.point_variables, lr=1.0)
-        optim_widths = torch.optim.Adam(self.widths_variables, lr=0.1)
-        optim_color = torch.optim.Adam(self.color_variables, lr=0.5)
+        optim_points = torch.optim.Adam(self.point_variables, lr=0.1)
+        optim_widths = torch.optim.Adam(self.widths_variables, lr=0.01)
+        optim_color = torch.optim.Adam(self.color_variables, lr=0.05)
 
         for iteration in range(num_steps):
             optim_points.zero_grad()
@@ -63,6 +65,7 @@ class AdversarialVandal(AdversarialCreator):
             optim_points.step()
             optim_widths.step()
             optim_color.step()
+
             for path in self.shapes:
                 path.stroke_width.data.clamp_(self.min_width, self.max_width)
             for group in self.shape_groups:
@@ -81,7 +84,10 @@ class AdversarialVandal(AdversarialCreator):
 
 
 if __name__ == "__main__":
-    # vandal = AdversarialVandal(img_path='images/picasso5.png', min_width=0.5, max_width=1.5, num_paths=5)
-    vandal = AdversarialVandal(img_path='images/banksy.png', min_width=0.5, max_width=1.5, num_paths=5)
+    # vandal = AdversarialVandal(img_path='images/picasso3.png', min_width=0.5, max_width=1.1, num_paths=5)
+    vandal = AdversarialVandal(img_path='images/goldfish.jpg', min_width=0.5, max_width=1.5, num_paths=10)
 
-    vandal.vandalize_image(num_steps=500)
+    vandal.vandalize_image(num_steps=200, target_class=393)
+    vandal.save_svg(name='images/vandal.svg')
+    label_idx, labelname, label_value = vandal.compute_current_label()
+    vandal.plot(title=f"{labelname} ({label_value:.1f})", name='images/vandal.png')

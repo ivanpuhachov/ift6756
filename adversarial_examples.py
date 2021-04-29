@@ -134,6 +134,7 @@ class AdversarialCreator:
 
             if iteration % self.frequency_plot == self.frequency_plot-1:
                 self.plot()
+                self.save_svg(name=f'images/paint_iteration/iter_{iteration}.svg')
 
     def adversarialExample(self, num_steps=100, target_class=291):
         """
@@ -148,8 +149,8 @@ class AdversarialCreator:
         label_idx, labelname, label_value = self.compute_current_label()
         self.plot(title=f"{labelname} ({label_value:.1f})")
 
-        optim_points = torch.optim.Adam(self.point_variables, lr=0.01)
-        optim_widths = torch.optim.Adam(self.widths_variables, lr=0.01)
+        optim_points = torch.optim.Adam(self.point_variables, lr=0.005)
+        optim_widths = torch.optim.Adam(self.widths_variables, lr=0.001)
         optim_color = torch.optim.Adam(self.color_variables, lr=0.00005)
 
         for iteration in range(num_steps):
@@ -167,7 +168,7 @@ class AdversarialCreator:
 
             optim_points.step()
             optim_widths.step()
-            # optim_color.step()
+            optim_color.step()
             for path in self.shapes:
                 path.stroke_width.data.clamp_(self.min_width, self.max_width)
             for group in self.shape_groups:
@@ -176,6 +177,9 @@ class AdversarialCreator:
             if iteration % self.frequency_plot == self.frequency_plot-1:
                 label_idx, labelname, label_value = self.get_current_label(class_output=output)
                 self.plot(title=f"{labelname} ({label_value:.1f})")
+
+        label_idx, labelname, label_value = self.compute_current_label()
+        self.plot(title=f"{labelname} ({label_value:.1f})", name='images/adversarial.png')
 
     def render_img(self):
         """
@@ -201,7 +205,7 @@ class AdversarialCreator:
         img = img[:, :, :3]
         return img
 
-    def plot(self, title=None):
+    def plot(self, title=None, name=None):
         """
         Plot current state as matplotlib image
 
@@ -211,6 +215,8 @@ class AdversarialCreator:
         plt.imshow(img.detach().cpu())
         plt.title(title)
         plt.axis('off')
+        if name is not None:
+            plt.savefig(name, bbox_inches='tight', dpi=150)
         plt.show()
 
     def compute_current_label(self):
@@ -230,11 +236,22 @@ class AdversarialCreator:
         print(f"Predicted label: {label_idx} '{labelname}' with proba {label_value:.3f}")
         return label_idx, labelname, label_value
 
+    def save_svg(self, name):
+        pydiffvg.save_svg(name,
+                          self.canvas_width,
+                          self.canvas_height,
+                          self.shapes,
+                          self.shape_groups)
+
 
 if __name__ == "__main__":
     # pydiffvg.set_print_timing(True)
-    creator = AdversarialCreator(num_paths=100, n_path_segments=2, max_width=6, min_width=2)
+    creator = AdversarialCreator(num_paths=40, n_path_segments=1, max_width=2, min_width=1)
     creator.plot(title='init')
-    # creator.fit_to_image(img_path='images/lion3.jpg', n_iterations=100)
-    creator.fit_to_image(img_path='images/picasso3.png', n_iterations=500)
-    creator.adversarialExample(num_steps=1000, target_class=1)
+    # creator.save_svg(name='images/paint_iteration/init.svg')
+    # creator.frequency_plot = 20
+    creator.fit_to_image(img_path='images/lion3.jpg', n_iterations=1000, use_perc_loss=True)
+    # creator.fit_to_image(img_path='images/banana.png', n_iterations=300)
+    # creator.save_svg(name='images/painterly_banana.svg')
+    creator.adversarialExample(num_steps=1000, target_class=954)
+    creator.save_svg(name='images/adversarial.svg')

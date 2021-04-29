@@ -22,7 +22,7 @@ if __name__ == "__main__":
     # parser.add_argument("--dataset", "-d", default="data/full_numpy_bitmap_owl.npy")
     parser.add_argument("--dataset", "-d", default="data/bitmap_owl_train_96x5000.npy")
     parser.add_argument("--imgsize", type=int, default=64, help="generated img size, MUST match with dataset img size")
-    parser.add_argument("--n_epochs", "-n", type=int, default=40, help="number of training epochs")
+    parser.add_argument("--n_epochs", "-n", type=int, default=120, help="number of training epochs")
     parser.add_argument("--batch", "-b", type=int, default=4, help="batch_size")
     parser.add_argument("--lr", type=float, default=1e-4, help="learning rate")
     parser.add_argument("--seed", type=int, default=23, help='random seed')
@@ -38,7 +38,9 @@ if __name__ == "__main__":
         print(f"{key} \t\t {getattr(args, key)}")
     # datasets_names = ['apple', 'carrot', 'cat', 'fish', 'owl', 'creativebirds']
     # datasets_names = ['apple', 'carrot', 'cat', 'fish', 'owl']
-    datasets_names = ['apple', 'donut', 'cookie', 'face', 'lollipop']
+    # datasets_names = ['apple', 'donut', 'cookie', 'face', 'lollipop']
+    # datasets_names = ['face']
+    datasets_names = ['creativebirds']
     dataset_path = args.dataset
     img_size = args.imgsize
     batch_size = args.batch
@@ -69,7 +71,7 @@ if __name__ == "__main__":
     print("\n-- datasets --")
     datasets = list()
     for name in datasets_names:
-        dataset_path = f"data/bitmap_{name}_train_{img_size}x5000.npy"
+        dataset_path = f"data/bitmap_{name}_train_{img_size}x8000.npy"
         assert os.path.exists(dataset_path)
         datasets.append(
             QuickDrawBitmapDataset(fpath=dataset_path,
@@ -109,7 +111,7 @@ if __name__ == "__main__":
     if use_beziergan:
         model = BezierGAN()
 
-    trainer = GTTrainer(model, dataloader=dataloader, log_dir=log_dir, lr=learning_rate)
+    trainer = WGANGP_Trainer(model, dataloader=dataloader, log_dir=log_dir, lr=learning_rate)
 
     # trainer.load_from_checkpoint("logs/04.02--23_b100_n1200/checkpoints/checkpoint_699.pth")
 
