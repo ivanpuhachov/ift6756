@@ -21,7 +21,7 @@ class AdversarialVandal(AdversarialCreator):
         self.img_path = img_path
         image = skimage.io.imread(img_path)
         image = skimage.transform.resize(image, (self.canvas_width, self.canvas_height))
-        self.target_image = torch.from_numpy(image).float().cuda()
+        self.target_image = torch.from_numpy(image).float().cuda()[:,:,:3]
         plt.imshow(image)
         plt.title('Target image')
         plt.show()
@@ -47,7 +47,7 @@ class AdversarialVandal(AdversarialCreator):
 
         optim_points = torch.optim.Adam(self.point_variables, lr=0.1)
         optim_widths = torch.optim.Adam(self.widths_variables, lr=0.01)
-        optim_color = torch.optim.Adam(self.color_variables, lr=0.05)
+        optim_color = torch.optim.Adam(self.color_variables, lr=0.005)
 
         for iteration in range(num_steps):
             optim_points.zero_grad()
@@ -85,9 +85,10 @@ class AdversarialVandal(AdversarialCreator):
 
 if __name__ == "__main__":
     # vandal = AdversarialVandal(img_path='images/picasso3.png', min_width=0.5, max_width=1.1, num_paths=5)
-    vandal = AdversarialVandal(img_path='images/goldfish.jpg', min_width=0.5, max_width=1.5, num_paths=10)
+    # vandal = AdversarialVandal(img_path='images/boulder.png', min_width=0.5, max_width=1.5, num_paths=10)
+    vandal = AdversarialVandal(img_path='images/lion2.png', min_width=0.5, max_width=1.5, num_paths=10)
 
-    vandal.vandalize_image(num_steps=200, target_class=393)
+    vandal.vandalize_image(num_steps=1000, target_class=254)
     vandal.save_svg(name='images/vandal.svg')
     label_idx, labelname, label_value = vandal.compute_current_label()
     vandal.plot(title=f"{labelname} ({label_value:.1f})", name='images/vandal.png')

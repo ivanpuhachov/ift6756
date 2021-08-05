@@ -1,0 +1,63 @@
+
+-- parsing args --
+Received keys:
+dataset 		 data/full_numpy_bitmap_owl.npy
+n_epochs 		 20
+batch 		 200
+lr 		 5e-05
+seed 		 23
+workers 		 8
+beziergan 		 False
+simplebeziergan 		 True
+simplegan 		 False
+
+-- logs and backup  --
+
+-- datasets --
+
+-- creating model --
+log dir: logs/04.18:00:50_n20/
+TensorBoard: tensorboard --logdir=logs/04.18:00:50_n20/tensorboard/
+
+-- training --
+Saving model to logs/04.18:00:50_n20/checkpoints/init.pth
+Epoch: 0
+Saving model to logs/04.18:00:50_n20/checkpoints/last_step.pth
+Epoch: 1
+Saving model to logs/04.18:00:50_n20/checkpoints/last_step.pth
+Epoch: 2
+Saving model to logs/04.18:00:50_n20/checkpoints/last_step.pth
+Epoch: 3
+Saving model to logs/04.18:00:50_n20/checkpoints/last_step.pth
+Epoch: 4
+Saving model to logs/04.18:00:50_n20/checkpoints/last_step.pth
+Epoch: 5
+Saving model to logs/04.18:00:50_n20/checkpoints/last_step.pth
+Epoch: 6
+Saving model to logs/04.18:00:50_n20/checkpoints/last_step.pth
+Epoch: 7
+Saving model to logs/04.18:00:50_n20/checkpoints/last_step.pth
+Epoch: 8
+Saving model to logs/04.18:00:50_n20/checkpoints/last_step.pth
+Epoch: 9
+Saving model to logs/04.18:00:50_n20/checkpoints/last_step.pth
+Epoch: 10
+Saving model to logs/04.18:00:50_n20/checkpoints/last_step.pth
+Epoch: 11
+Saving model to logs/04.18:00:50_n20/checkpoints/last_step.pth
+Epoch: 12
+Saving model to logs/04.18:00:50_n20/checkpoints/last_step.pth
+Epoch: 13
+Saving model to logs/04.18:00:50_n20/checkpoints/last_step.pth
+Epoch: 14
+Saving model to logs/04.18:00:50_n20/checkpoints/last_step.pth
+Epoch: 15
+Saving model to logs/04.18:00:50_n20/checkpoints/last_step.pth
+Epoch: 16
+Saving model to logs/04.18:00:50_n20/checkpoints/last_step.pth
+Epoch: 17
+Saving model to logs/04.18:00:50_n20/checkpoints/last_step.pth
+Epoch: 18
+Saving model to logs/04.18:00:50_n20/checkpoints/last_step.pth
+Epoch: 19
+Saving model to logs/04.18:00:50_n20/checkpoints/last_step.pth

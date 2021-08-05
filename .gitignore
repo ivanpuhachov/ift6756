@@ -2,6 +2,8 @@ lectures/
 papers/
 logs/
 .idea/
+data/
+__pycache__/
 
 ## Core latex/pdflatex auxiliary files:
 *.aux
@@ -17,3 +19,6 @@ logs/
 *.bbl
 *.blg
 *.gz
+*.vrb
+*.snm
+*.nav

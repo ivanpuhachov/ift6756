@@ -149,9 +149,9 @@ class AdversarialCreator:
         label_idx, labelname, label_value = self.compute_current_label()
         self.plot(title=f"{labelname} ({label_value:.1f})")
 
-        optim_points = torch.optim.Adam(self.point_variables, lr=0.005)
+        optim_points = torch.optim.Adam(self.point_variables, lr=0.05)
         optim_widths = torch.optim.Adam(self.widths_variables, lr=0.001)
-        optim_color = torch.optim.Adam(self.color_variables, lr=0.00005)
+        optim_color = torch.optim.Adam(self.color_variables, lr=0.005)
 
         for iteration in range(num_steps):
             optim_points.zero_grad()
@@ -246,12 +246,13 @@ class AdversarialCreator:
 
 if __name__ == "__main__":
     # pydiffvg.set_print_timing(True)
-    creator = AdversarialCreator(num_paths=40, n_path_segments=1, max_width=2, min_width=1)
+    creator = AdversarialCreator(num_paths=3, n_path_segments=20, max_width=1.5, min_width=0.3)
     creator.plot(title='init')
     # creator.save_svg(name='images/paint_iteration/init.svg')
     # creator.frequency_plot = 20
-    creator.fit_to_image(img_path='images/lion3.jpg', n_iterations=1000, use_perc_loss=True)
-    # creator.fit_to_image(img_path='images/banana.png', n_iterations=300)
+    # creator.fit_to_image(img_path='images/lion3.jpg', n_iterations=100, use_perc_loss=True)
+    creator.fit_to_image(img_path='images/banana.png', n_iterations=100)
+    # creator.fit_to_image(img_path='images/muffin.png', n_iterations=10)
     # creator.save_svg(name='images/painterly_banana.svg')
     creator.adversarialExample(num_steps=1000, target_class=954)
     creator.save_svg(name='images/adversarial.svg')

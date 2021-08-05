@@ -7,8 +7,18 @@ Course webpage: https://gauthiergidel.github.io/courses/game_theory_ML_2021.html
 
 # Final Project
 
+## Models
+ * WGAN
+ * WGAN GP
+ * SNGAN
+ * LOGAN
+
 ## Data
- * QuickDraw data - download from https://console.cloud.google.com/storage/browser/quickdraw_dataset/full/numpy_bitmap
+ * QuickDraw bitmap data - download from https://console.cloud.google.com/storage/browser/quickdraw_dataset/full/numpy_bitmap
+ * Quickdraw `.npz` data - download from https://console.cloud.google.com/storage/browser/quickdraw_dataset/sketchrnn
+
+### Process .npz
+Run `process_quickdraw_npz.py`
 
 ## Installing DiffVG
 See https://github.com/BachiLi/diffvg

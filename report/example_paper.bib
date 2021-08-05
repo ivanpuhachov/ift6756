@@ -1,75 +1,3 @@
-@inproceedings{langley00,
- author    = {P. Langley},
- title     = {Crafting Papers on Machine Learning},
- year      = {2000},
- pages     = {1207--1216},
- editor    = {Pat Langley},
- booktitle     = {Proceedings of the 17th International Conference
-              on Machine Learning (ICML 2000)},
- address   = {Stanford, CA},
- publisher = {Morgan Kaufmann}
-}
-
-@TechReport{mitchell80,
-  author = 	 "T. M. Mitchell",
-  title = 	 "The Need for Biases in Learning Generalizations",
-  institution =  "Computer Science Department, Rutgers University",
-  year = 	 "1980",
-  address =	 "New Brunswick, MA",
-}
-
-@phdthesis{kearns89,
-  author = {M. J. Kearns},
-  title =  {Computational Complexity of Machine Learning},
-  school = {Department of Computer Science, Harvard University},
-  year =   {1989}
-}
-
-@Book{MachineLearningI,
-  editor = 	 "R. S. Michalski and J. G. Carbonell and T.
-		  M. Mitchell",
-  title = 	 "Machine Learning: An Artificial Intelligence
-		  Approach, Vol. I",
-  publisher = 	 "Tioga",
-  year = 	 "1983",
-  address =	 "Palo Alto, CA"
-}
-
-@Book{DudaHart2nd,
-  author =       "R. O. Duda and P. E. Hart and D. G. Stork",
-  title =        "Pattern Classification",
-  publisher =    "John Wiley and Sons",
-  edition =      "2nd",
-  year =         "2000"
-}
-
-
-
-@InCollection{Newell81,
-  author =       "A. Newell and P. S. Rosenbloom",
-  title =        "Mechanisms of Skill Acquisition and the Law of
-                  Practice", 
-  booktitle =    "Cognitive Skills and Their Acquisition",
-  pages =        "1--51",
-  publisher =    "Lawrence Erlbaum Associates, Inc.",
-  year =         "1981",
-  editor =       "J. R. Anderson",
-  chapter =      "1",
-  address =      "Hillsdale, NJ"
-}
-
-
-@Article{Samuel59,
-  author = 	 "A. L. Samuel",
-  title = 	 "Some Studies in Machine Learning Using the Game of
-		  Checkers",
-  journal =	 "IBM Journal of Research and Development",
-  year =	 "1959",
-  volume =	 "3",
-  number =	 "3",
-  pages =	 "211--229"
-}
-
 @article{diffsvg,
 	author = {Li, Tzu-Mao and Luk\'{a}\v{c}, Michal and Gharbi, Micha\"{e}l and Ragan-Kelley, Jonathan},
 	title = {Differentiable Vector Graphics Rasterization for Editing and Learning},
@@ -99,14 +27,14 @@
 	primaryClass={cs.CV}
 }
 
-@article{sketchrnn,
+@inproceedings{sketchrnn,
 	title	= {A Neural Representation of Sketch Drawings},
 	author	= {David Ha and Douglas Eck},
 	year	= {2018},
 	URL	= {https://openreview.net/pdf?id=Hy6GHpkCW},
-	note	= {2018},
-	booktitle	= {ICLR 2018}
+	booktitle	= {ICLR}
 }
+
 
 @article{Cao_Yan_Shi_Chen_2019, title={AI-Sketcher : A Deep Generative Model for Producing High-Quality Sketches}, volume={33}, url={https://ojs.aaai.org/index.php/AAAI/article/view/4103}, DOI={10.1609/aaai.v33i01.33012564}, abstractNote={&lt;p&gt;Sketch drawings play an important role in assisting humans in communication and creative design since ancient period. This situation has motivated the development of artificial intelligence (AI) techniques for automatically generating sketches based on user input. Sketch-RNN, a sequence-to-sequence variational autoencoder (VAE) model, was developed for this purpose and known as a state-of-the-art technique. However, it suffers from limitations, including the generation of lowquality results and its incapability to support multi-class generations. To address these issues, we introduced AI-Sketcher, a deep generative model for generating high-quality multiclass sketches. Our model improves drawing quality by employing a CNN-based autoencoder to capture the positional information of each stroke at the pixel level. It also introduces an influence layer to more precisely guide the generation of each stroke by directly referring to the training data. To support multi-class sketch generation, we provided a conditional vector that can help differentiate sketches under various classes. The proposed technique was evaluated based on two large-scale sketch datasets, and results demonstrated its power in generating high-quality sketches.&lt;/p&gt;}, number={01}, journal={Proceedings of the AAAI Conference on Artificial Intelligence}, author={Cao, Nan and Yan, Xin and Shi, Yang and Chen, Chaoran}, year={2019}, month={Jul.}, pages={2564-2571} }
 
@@ -132,6 +60,94 @@
 	author={John F. J. Mellor and Eunbyung Park and Yaroslav Ganin and Igor Babuschkin and Tejas Kulkarni and Dan Rosenbaum and Andy Ballard and Theophane Weber and Oriol Vinyals and S. M. Ali Eslami},
 	year={2019},
 	eprint={1910.01007},
+	archivePrefix={arXiv},
+	primaryClass={cs.CV}
+}
+
+@misc{svgvae,
+      title={A Learned Representation for Scalable Vector Graphics}, 
+      author={Raphael Gontijo Lopes and David Ha and Douglas Eck and Jonathon Shlens},
+      year={2019},
+      eprint={1904.02632},
+      archivePrefix={arXiv},
+      primaryClass={cs.CV}
+}
+
+@misc{carlier2020deepsvg,
+	title={DeepSVG: A Hierarchical Generative Network for Vector Graphics Animation},
+	author={Alexandre Carlier and Martin Danelljan and Alexandre Alahi and Radu Timofte},
+	year={2020},
+	eprint={2007.11301},
+	archivePrefix={arXiv},
+	primaryClass={cs.CV}
+}
+
+@misc{reddy2021im2vec,
+	title={Im2Vec: Synthesizing Vector Graphics without Vector Supervision}, 
+	author={Pradyumna Reddy and Michael Gharbi and Michal Lukac and Niloy J. Mitra},
+	year={2021},
+	eprint={2102.02798},
+	archivePrefix={arXiv},
+	primaryClass={cs.CV}
+}
+
+@misc{arjovsky2017wasserstein,
+	title={Wasserstein GAN}, 
+	author={Martin Arjovsky and Soumith Chintala and Léon Bottou},
+	year={2017},
+	eprint={1701.07875},
+	archivePrefix={arXiv},
+	primaryClass={stat.ML}
+}
+
+@misc{gulrajani2017improved,
+	title={Improved Training of Wasserstein GANs}, 
+	author={Ishaan Gulrajani and Faruk Ahmed and Martin Arjovsky and Vincent Dumoulin and Aaron Courville},
+	year={2017},
+	eprint={1704.00028},
+	archivePrefix={arXiv},
+	primaryClass={cs.LG}
+}
+
+@misc{miyato2018spectral,
+	title={Spectral Normalization for Generative Adversarial Networks}, 
+	author={Takeru Miyato and Toshiki Kataoka and Masanori Koyama and Yuichi Yoshida},
+	year={2018},
+	eprint={1802.05957},
+	archivePrefix={arXiv},
+	primaryClass={cs.LG}
+}
+
+@misc{wu2020logan,
+	title={LOGAN: Latent Optimisation for Generative Adversarial Networks}, 
+	author={Yan Wu and Jeff Donahue and David Balduzzi and Karen Simonyan and Timothy Lillicrap},
+	year={2020},
+	eprint={1912.00953},
+	archivePrefix={arXiv},
+	primaryClass={cs.LG}
+}
+
+@article{mo2021virtualsketching,
+	title   = {General Virtual Sketching Framework for Vector Line Art},
+	author  = {Mo, Haoran and Simo-Serra, Edgar and Gao, Chengying and Zou, Changqing and Wang, Ruomei},
+	journal = {ACM Transactions on Graphics (Proceedings of ACM SIGGRAPH 2021)},
+	year    = {2021},
+}
+
+@misc{goodfellow2015explaining,
+	title={Explaining and Harnessing Adversarial Examples}, 
+	author={Ian J. Goodfellow and Jonathon Shlens and Christian Szegedy},
+	year={2015},
+	eprint={1412.6572},
+	archivePrefix={arXiv},
+	primaryClass={stat.ML}
+}
+
+@misc{he2021eigengan,
+	title={EigenGAN: Layer-Wise Eigen-Learning for GANs}, 
+	author={Zhenliang He and Meina Kan and Shiguang Shan},
+	year={2021},
+	eprint={2104.12476},
 	archivePrefix={arXiv},
 	primaryClass={cs.CV}
 }

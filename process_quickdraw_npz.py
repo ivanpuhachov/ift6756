@@ -10,7 +10,7 @@ def process_npz_item(item, img_size=32):
     return npimg
 
 
-def process_npz(dataname='owl', n_items=5000, finalsize=64):
+def process_npz(dataname='owl', n_items=15000, finalsize=64):
     subset = 'train'
 
     input_path = f"data/{dataname}.npz"
@@ -32,11 +32,11 @@ if __name__=="__main__":
     # process_npz("apple")
     # process_npz("cat")
     # process_npz("carrot")
-    # process_npz("creativebirds")
+    process_npz("creativebirds", n_items=8000)
     # process_npz("fish")
     # process_npz("lamp")
     # process_npz("lightbulb")
     # process_npz("lollipop")
     # process_npz("donut")
-    process_npz("cookie")
-    process_npz("face")
+    # process_npz("cookie")
+    # process_npz("face")
